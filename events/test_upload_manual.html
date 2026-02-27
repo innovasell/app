@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>Teste de Upload</title>
+</head>
+
+<body>
+    <h2>Teste Manual de Upload</h2>
+    <form action="api/process_upload.php" method="POST" enctype="multipart/form-data">
+        <label>Número da Fatura:</label><br>
+        <input type="text" name="num_fatura" value="FT00004210" required><br><br>
+
+        <label>Arquivo CSV:</label><br>
+        <input type="file" name="csv_file" accept=".csv" required><br><br>
+
+        <button type="submit">Enviar</button>
+    </form>
+
+    <hr>
+    <h3>Teste via Fetch (JavaScript)</h3>
+    <button onclick="testUpload()">Testar Upload</button>
+    <pre id="result"></pre>
+
+    <script>
+        async function testUpload() {
+            const formData = new FormData();
+
+            // Busca o arquivo CSV
+            const response = await fetch('FT00004210_202512191734291438.csv');
+            const blob = await response.blob();
+            formData.append('csv_file', blob, 'test.csv');
+            formData.append('num_fatura', 'FT00004210');
+
+            try {
+                const uploadResponse = await fetch('api/process_upload.php', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                // Mostra o que foi retornado (texto puro)
+                const text = await uploadResponse.text();
+                document.getElementById('result').textContent = 'Response Text:\n' + text;
+
+                // Tenta parsear como JSON
+                try {
+                    const json = JSON.parse(text);
+                    document.getElementById('result').textContent += '\n\nParsed JSON:\n' + JSON.stringify(json, null, 2);
+                } catch (e) {
+                    document.getElementById('result').textContent += '\n\nJSON Parse Error: ' + e.message;
+                }
+            } catch (error) {
+                document.getElementById('result').textContent = 'Fetch Error: ' + error.message;
+            }
+        }
+    </script>
+</body>
+
+</html>

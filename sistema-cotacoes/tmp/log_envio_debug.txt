@@ -1,0 +1,61 @@
+🟢 ENTROU NO TRY em: 2025-04-07 23:30:09
+📄 PDF EXISTE? NÃO após 5s de espera
+🟡 ENTROU NO BLOCO DE ENVIO: 2025-04-07 23:30:15
+URL: https://www.innovasell.com.br/sistema-cotacoes/enviar_orcamento.php?num=20250407233009&email=hector.hansen%40innovasell.com.br
+Chamado em: 2025-04-07 23:30:15
+URL chamada: https://www.innovasell.com.br/sistema-cotacoes/enviar_orcamento.php?num=20250407233009&email=hector.hansen%40innovasell.com.br
+Resposta: 
+<br />
+<b>Fatal error</b>:  Uncaught PHPMailer\PHPMailer\Exception: Could not access file: /var/www/sistema-cotacoes/tmp/orcamento_20250407233009.pdf in /var/www/sistema-cotacoes/vendor/phpmailer/phpmailer/src/PHPMailer.php:3266
+Stack trace:
+#0 /var/www/sistema-cotacoes/enviar_orcamento.php(98): PHPMailer\PHPMailer\PHPMailer-&gt;addAttachment('/var/www/sistem...')
+#1 {main}
+  thrown in <b>/var/www/sistema-cotacoes/vendor/phpmailer/phpmailer/src/PHPMailer.php</b> on line <b>3266</b><br />
+
+Erro CURL: 
+
+🟢 ENTROU NO TRY em: 2025-04-07 23:37:30
+📄 PDF EXISTE? NÃO após 5s de espera
+🟡 ENTROU NO BLOCO DE ENVIO: 2025-04-07 23:37:35
+URL: https://www.innovasell.com.br/sistema-cotacoes/enviar_orcamento.php?num=20250407233730&email=hector.hansen%40innovasell.com.br
+Chamado em: 2025-04-07 23:37:36
+URL chamada: https://www.innovasell.com.br/sistema-cotacoes/enviar_orcamento.php?num=20250407233730&email=hector.hansen%40innovasell.com.br
+Resposta: 
+<br />
+<b>Fatal error</b>:  Uncaught PHPMailer\PHPMailer\Exception: Could not access file: /var/www/sistema-cotacoes/tmp/orcamento_20250407233730.pdf in /var/www/sistema-cotacoes/vendor/phpmailer/phpmailer/src/PHPMailer.php:3266
+Stack trace:
+#0 /var/www/sistema-cotacoes/enviar_orcamento.php(98): PHPMailer\PHPMailer\PHPMailer-&gt;addAttachment('/var/www/sistem...')
+#1 {main}
+  thrown in <b>/var/www/sistema-cotacoes/vendor/phpmailer/phpmailer/src/PHPMailer.php</b> on line <b>3266</b><br />
+
+Erro CURL: 
+
+Chamado em: 2025-04-07 23:40:55
+URL chamada: https://www.innovasell.com.br/sistema-cotacoes/enviar_orcamento.php?num=20250407234050&email=hector.hansen%40innovasell.com.br
+Resposta: 
+<br />
+<b>Fatal error</b>:  Uncaught PHPMailer\PHPMailer\Exception: Could not access file: /var/www/sistema-cotacoes/tmp/orcamento_20250407234050.pdf in /var/www/sistema-cotacoes/vendor/phpmailer/phpmailer/src/PHPMailer.php:3266
+Stack trace:
+#0 /var/www/sistema-cotacoes/enviar_orcamento.php(98): PHPMailer\PHPMailer\PHPMailer-&gt;addAttachment('/var/www/sistem...')
+#1 {main}
+  thrown in <b>/var/www/sistema-cotacoes/vendor/phpmailer/phpmailer/src/PHPMailer.php</b> on line <b>3266</b><br />
+
+Erro CURL: 
+
+Chamado em: 2025-04-07 23:44:36
+URL chamada: https://www.innovasell.com.br/sistema-cotacoes/enviar_orcamento.php?num=20250407234431&email=hector.hansen%40innovasell.com.br
+Resposta: 
+<br />
+<b>Fatal error</b>:  Uncaught PHPMailer\PHPMailer\Exception: Could not access file: /var/www/sistema-cotacoes/tmp/orcamento_20250407234431.pdf in /var/www/sistema-cotacoes/vendor/phpmailer/phpmailer/src/PHPMailer.php:3266
+Stack trace:
+#0 /var/www/sistema-cotacoes/enviar_orcamento.php(98): PHPMailer\PHPMailer\PHPMailer-&gt;addAttachment('/var/www/sistem...')
+#1 {main}
+  thrown in <b>/var/www/sistema-cotacoes/vendor/phpmailer/phpmailer/src/PHPMailer.php</b> on line <b>3266</b><br />
+
+Erro CURL: 
+
+Chamado em: 2025-04-07 23:47:53
+URL chamada: https://www.innovasell.com.br/sistema-cotacoes/enviar_orcamento.php?num=20250407234747&email=hector.hansen%40innovasell.com.br
+Resposta: 
+Erro CURL: 
+

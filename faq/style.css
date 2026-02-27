@@ -1,0 +1,87 @@
+/* style.css */
+
+/* Fundo geral */
+body {
+    background-color: #f8f9fa;
+}
+
+/* =========================================
+   ESTILO DA BARRA DE TÍTULO (Accordion)
+   ========================================= */
+
+/* O botão do accordion agora é um container Flex */
+.accordion-button .title-row {
+    display: flex;
+    flex-direction: column; /* Mobile First: Empilhado verticalmente */
+    width: 100%;
+    align-items: flex-start;
+    text-align: left;
+    gap: 0.25rem;
+}
+
+/* Produto em Destaque */
+.product-highlight {
+    font-size: 1rem;          
+    font-weight: 600;         
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #198754;           /* VERDE */
+    margin-bottom: 0.2rem;    
+}
+
+/* Texto da Pergunta */
+.qtext {
+    font-weight: 600;
+    font-size: 1rem;
+    color: #212529;
+    line-height: 1.4;
+    margin-right: 0.5rem;
+}
+
+/* Container do Fornecedor (Badge) */
+.badges-wrapper {
+    margin-top: 0.5rem;
+}
+
+/* Badge Personalizada do Fornecedor */
+.badge-supplier {
+    font-size: 0.75rem;
+    padding: 0.4em 0.6em;
+    border-radius: 4px;
+    color: #fff !important; /* Força texto branco */
+    text-shadow: 0 1px 2px rgba(0,0,0,0.25); 
+    white-space: nowrap;
+    font-weight: 600;
+}
+
+/* =========================================
+   RESPONSIVIDADE (Desktop - Telas grandes)
+   ========================================= */
+@media (min-width: 768px) {
+    /* No desktop, vira uma linha horizontal */
+    .accordion-button .title-row {
+        flex-direction: row; 
+        align-items: center;
+        gap: 1rem;
+    }
+
+    /* Grupo de Produto e Pergunta */
+    .main-content {
+        display: flex;
+        flex-direction: column; /* Produto em cima da pergunta */
+        flex: 1; /* Ocupa o espaço disponível */
+    }
+
+    /* Joga o fornecedor para a direita */
+    .badges-wrapper {
+        margin-top: 0;
+        margin-left: auto;
+        padding-left: 1rem;
+        /* --- AQUI ESTÁ A MUDANÇA --- */
+        margin-right: 2.5rem; /* Espaço extra para afastar da seta */
+    }
+}
+
+/* Ajustes gerais */
+.navbar-brand i { color: #0d6efd; }
+.kpi .card-body { padding: 1.25rem; }

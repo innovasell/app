@@ -1,0 +1,27 @@
+/* Arquivo gerado automaticamente a partir de index.php */
+.accordion-button .title-row{display:flex;gap:.75rem;align-items:center;width:100%}
+    .accordion-button .qtext{flex:1 1 auto;min-width:0}
+    .text-truncate-1 {overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical}
+
+    /* ===== MOBILE (≤576px) ===== */
+    @media (max-width: 576px) {
+      .top-search-desktop {display:none !important}
+      .accordion-button {padding:.75rem}
+      .accordion-button .qtext{
+        font-weight:600;font-size:1rem;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden
+      }
+      .meta-xs {display:block;font-size:.86rem;color:#6c757d}
+      .badges-md {display:none}
+      .faq-badges {gap:.4rem}
+      .badge {font-size:.72rem;padding:.35em .55em}
+      .pagination {justify-content:center}
+      .pagination .page-link {padding:.35rem .6rem;font-size:.9rem}
+      .kpi .card-body {padding:.9rem 1rem}
+    }
+    /* DESKTOP (≥577px) */
+    @media (min-width: 577px){
+      .meta-xs {display:none}
+      .badges-md {display:flex;gap:.4rem}
+      .offcanvas {display:none} /* painel só para mobile */
+      .top-search-desktop {display:flex}
+    }

@@ -1,0 +1,36 @@
+body {
+    background-color: #f8f9fa;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.btn-circulo {
+    border-radius: 50%;
+    width: 250px;
+    height: 250px;
+    font-size: 1.5rem;
+    font-weight: 700;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    white-space: normal;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 40px auto;
+}
+
+.btn-lg {
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+/* ESTADO DE SUCESSO - VERDE */
+.btn-check-ok {
+    border: 3px solid #198754 !important;
+    background-color: #d1e7dd !important;
+    color: #0f5132 !important;
+    transition: all 0.3s;
+}
+
+.btn-check-ok::after {
+    content: ' ✅';
+    margin-left: 8px;
+}

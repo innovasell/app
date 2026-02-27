@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Documento A4 com Cabeçalho e Rodapé Absolutos</title>
+  <style>
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      background:#fff;
+    }
+
+    .pagina-a4 {
+      background: #fff;
+      width: 21cm;
+      min-height: 29.7cm;
+      box-sizing: border-box;
+      font-size: 11pt;
+      position: relative;
+        border:none;
+  box-shadow:none;
+      /* O “respiro” do conteúdo fica na .conteudo; não precisa padding-top/bottom aqui */
+    }
+
+    /* ❷ Cabeçalho/rodapé fixos na página (e não absolutos no container) */
+
+    .cabecalho {
+      top: 0;
+      position: fixed;
+      left: 0;
+      right: 0;
+      width: 100%;
+    }
+
+    .rodape {
+      bottom: 0;
+      position: fixed;
+      left: 0;
+      right: 0;
+      width: 100%;
+    }
+
+    .imagem-template {
+      width: 100%;
+      display: block;
+    }
+
+    /* ❸ Respiro do conteúdo: top = altura do header, bottom = altura do footer */
+    .conteudo {
+      padding: 0mm 10mm;
+    }
+
+    /* ajuste os mm à altura real das imagens */
+
+    h2 {
+      font-size: 18px;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 5px;
+      margin-top: 30px;
+    }
+
+    p {
+      line-height: 1.6;
+      text-align: justify;
+      font-size: 12pt;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th,
+    td {
+      padding: 6px 8px;
+    }
+  </style>
+
+</head>
+
+<body>
+  <div class="pagina-a4">
+<!--    <div class="cabecalho">
+      <img src="assets/src/image/template_header_v1.png" class="imagem-template" alt="">
+      <img src="assets/src/image/CATEGORY_IMAGE_PLACEHOLDER" class="imagem-template" alt="">
+    </div>-->
+    <div class="conteudo">{{CONTENT}}</div>
+<!--<div class="rodape">
+      <img src="assets/src/image/template_footer_v1.png" alt="Rodapé" class="imagem-template">
+    </div>-->
+  </div>
+</body>
+</html>
