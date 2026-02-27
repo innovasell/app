@@ -98,7 +98,7 @@ switch ($target) {
 
     case 'expedicao':
         if (($user['acessos']['expedicao'] ?? 0) == 1) {
-            header("Location: EXP/");
+            header("Location: exp/");
             exit;
         }
         break;
