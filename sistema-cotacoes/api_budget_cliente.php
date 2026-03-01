@@ -46,7 +46,7 @@ if ($action === 'buscar_produtos') {
     if (empty($cnpj)) { echo json_encode([]); exit(); }
 
     try {
-        // Busca os produtos do budget + JOIN com price list pelo nome do produto
+        // ── 1. Busca produtos do budget (query simples, sem JOIN) ──────────────
         $sql = "SELECT
                     b.produto,
                     b.fabricante,
@@ -63,20 +63,50 @@ if ($action === 'buscar_produtos') {
                     b.preco_ajustado,
                     b.reajuste_sugerido,
                     b.vendedor_ajustado,
-                    b.comentarios_supply,
-                    pl.preco_net_usd AS price_list_usd,
-                    pl.embalagem     AS price_list_emb
+                    b.comentarios_supply
                 FROM cot_budget_cliente b
-                LEFT JOIN cot_price_list pl
-                    ON LOWER(TRIM(b.produto)) = LOWER(TRIM(pl.produto))
                 WHERE b.cnpj = :cnpj
                 ORDER BY b.produto ASC";
         $stmt = $pdo->prepare($sql);
         $stmt->execute([':cnpj' => $cnpj]);
         $produtos = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        echo json_encode($produtos);
+
+        // ── 2. Tenta enriquecer com price list (tolerante a falha) ────────────
+        try {
+            // Cria mapa produto → preco_net_usd a partir da cot_price_list
+            $plStmt = $pdo->query("SELECT produto, preco_net_usd, embalagem FROM cot_price_list");
+            $priceMap = [];
+            while ($row = $plStmt->fetch(PDO::FETCH_ASSOC)) {
+                $key = mb_strtolower(trim($row['produto']), 'UTF-8');
+                $priceMap[$key] = [
+                    'preco_net_usd' => $row['preco_net_usd'],
+                    'embalagem'     => $row['embalagem'],
+                ];
+            }
+            // Adiciona os dados de price list em cada produto
+            foreach ($produtos as &$p) {
+                $key = mb_strtolower(trim($p['produto'] ?? ''), 'UTF-8');
+                $p['price_list_usd'] = $priceMap[$key]['preco_net_usd'] ?? null;
+                $p['price_list_emb'] = $priceMap[$key]['embalagem']     ?? null;
+            }
+            unset($p);
+        } catch (Throwable $plEx) {
+            // cot_price_list não acessível — retorna produtos sem price list
+            foreach ($produtos as &$p) {
+                $p['price_list_usd'] = null;
+                $p['price_list_emb'] = null;
+            }
+            unset($p);
+        }
+
+        // Força encoding UTF-8 em campos de texto
+        $flags = JSON_UNESCAPED_UNICODE | JSON_PARTIAL_OUTPUT_ON_ERROR;
+        echo json_encode($produtos, $flags);
+
     } catch (PDOException $e) {
-        echo json_encode(['erro' => $e->getMessage()]);
+        // Erro na query principal — retorna array vazio com info de debug
+        $flags = JSON_UNESCAPED_UNICODE;
+        echo json_encode(['__erro' => $e->getMessage()], $flags);
     }
     exit();
 }
@@ -99,7 +129,12 @@ if ($action === 'resumo_cliente') {
         $stmt2->execute([':cnpj' => $cnpj]);
         $extra = $stmt2->fetch(PDO::FETCH_ASSOC);
 
-        echo json_encode(array_merge($cliente ?? [], $extra ?? []));
+        // Se não encontrar o CNPJ em cot_clientes, retorna apenas os dados do budget
+        if (!$cliente) {
+            echo json_encode($extra ?? []);
+        } else {
+            echo json_encode(array_merge($cliente, $extra ?? []));
+        }
     } catch (PDOException $e) {
         echo json_encode(['erro' => $e->getMessage()]);
     }

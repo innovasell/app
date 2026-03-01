@@ -305,9 +305,22 @@ async function selecionarCliente(data) {
 
         // Produtos
         const resProd = await fetch(`api_budget_cliente.php?action=buscar_produtos&cnpj=${encodeURIComponent(data.cnpj)}`);
-        todosOsProdutos = await resProd.json();
+        const rawProd = await resProd.json();
 
         loadingState.style.display = 'none';
+
+        // Verifica se a resposta é um array válido (protege contra {__erro:...})
+        if (!Array.isArray(rawProd)) {
+            const msg = rawProd?.__erro || 'Resposta inválida da API';
+            tableCard.style.display = 'block';
+            emptyState.style.display = 'block';
+            emptyState.innerHTML = `<i class="bi bi-exclamation-triangle fs-2 d-block mb-2 text-danger"></i>
+                <span class="text-danger">Erro ao carregar produtos: <code>${esc(msg)}</code></span>`;
+            renderClientCard(resumo);
+            return;
+        }
+
+        todosOsProdutos = rawProd;
         renderClientCard(resumo);
         renderTabela(todosOsProdutos);
     } catch(e) {
