@@ -81,6 +81,7 @@ function is_active($item_key, $active_key, $grupo = false)
       'gerenciar' => ['incluir_produto', 'gerenciar_cliente', 'gerenciar_price_list'], // Grouped
       'financeiro' => ['nfs_emitidas'], // UI label handles rename to API
       'cenarios' => ['incluir_cenario', 'consultar_cenarios', 'gerenciar_fornecedores'],
+      'pricelists' => ['pricelist_cliente', 'atualizar_budget', 'pricelist_view'],
       'minha_conta' => ['central_gerenciamento', 'gerenciar_usuarios', 'gerenciar_menus'] // User menu
     ];
     return isset($grupos[$item_key]) && in_array($active_key, $grupos[$item_key]);
@@ -217,9 +218,27 @@ function is_active($item_key, $active_key, $grupo = false)
           </li>
         <?php endif; ?>
 
-        <?php if (check_permission('price_list_view')): ?>
-          <li class="nav-item">
-            <a class="nav-link" href="price_list.php"><i class="fas fa-tags me-1"></i> Pricelist</a>
+        <?php if (check_permission('price_list_view') || check_permission('budget_cliente')): ?>
+          <li class="nav-item dropdown <?php echo (in_array($pagina_ativa, ['pricelist_view', 'pricelist_cliente', 'atualizar_budget'])) ? 'active' : ''; ?>">
+            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownPriceLists" role="button"
+              data-bs-toggle="dropdown" aria-expanded="false">
+              <i class="fas fa-tags me-1"></i> Price Lists
+            </a>
+            <ul class="dropdown-menu" aria-labelledby="navbarDropdownPriceLists">
+              <?php if (check_permission('price_list_view')): ?>
+                <li><a class="dropdown-item <?php echo is_active('pricelist_view', $pagina_ativa) ? 'active' : ''; ?>"
+                       href="price_list.php">Price List Geral</a></li>
+              <?php endif; ?>
+              <?php if (check_permission('budget_cliente')): ?>
+                <?php if (check_permission('price_list_view')): ?>
+                  <li><hr class="dropdown-divider"></li>
+                <?php endif; ?>
+                <li><a class="dropdown-item <?php echo is_active('pricelist_cliente', $pagina_ativa) ? 'active' : ''; ?>"
+                       href="pricelist_cliente.php">Price List Clientes</a></li>
+                <li><a class="dropdown-item <?php echo is_active('atualizar_budget', $pagina_ativa) ? 'active' : ''; ?>"
+                       href="atualizar_budget.php"><i class="fas fa-upload me-1 text-muted small"></i> Atualizar BUDGET</a></li>
+              <?php endif; ?>
+            </ul>
           </li>
         <?php endif; ?>
 
