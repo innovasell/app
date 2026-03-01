@@ -46,7 +46,7 @@ if ($action === 'buscar_produtos') {
     if (empty($cnpj)) { echo json_encode([]); exit(); }
 
     try {
-        // ── 1. Busca produtos do budget (query simples, sem JOIN) ──────────────
+        // ── 1. Busca produtos com KG Orçado 2026 > 0 ──────────────────────────
         $sql = "SELECT
                     b.produto,
                     b.fabricante,
@@ -66,47 +66,40 @@ if ($action === 'buscar_produtos') {
                     b.comentarios_supply
                 FROM cot_budget_cliente b
                 WHERE b.cnpj = :cnpj
+                  AND b.kg_orcado_2026 IS NOT NULL
+                  AND b.kg_orcado_2026 > 0
                 ORDER BY b.produto ASC";
         $stmt = $pdo->prepare($sql);
         $stmt->execute([':cnpj' => $cnpj]);
         $produtos = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        // ── 2. Tenta enriquecer com price list (tolerante a falha) ────────────
+        // ── 2. Enriquece com price list (tolerante a falha) ───────────────────
+        // Chave composta: nome_produto + '|' + embalagem (arredondada 3 casas)
         try {
-            // Cria mapa produto → preco_net_usd a partir da cot_price_list
-            $plStmt = $pdo->query("SELECT produto, preco_net_usd, embalagem FROM cot_price_list");
+            $plStmt = $pdo->query("SELECT produto, embalagem, preco_net_usd FROM cot_price_list");
             $priceMap = [];
             while ($row = $plStmt->fetch(PDO::FETCH_ASSOC)) {
-                $key = mb_strtolower(trim($row['produto']), 'UTF-8');
-                $priceMap[$key] = [
-                    'preco_net_usd' => $row['preco_net_usd'],
-                    'embalagem'     => $row['embalagem'],
-                ];
+                $nome = mb_strtolower(trim($row['produto']), 'UTF-8');
+                $emb  = number_format((float)$row['embalagem'], 3, '.', '');
+                $key  = $nome . '|' . $emb;
+                $priceMap[$key] = $row['preco_net_usd'];
             }
-            // Adiciona os dados de price list em cada produto
             foreach ($produtos as &$p) {
-                $key = mb_strtolower(trim($p['produto'] ?? ''), 'UTF-8');
-                $p['price_list_usd'] = $priceMap[$key]['preco_net_usd'] ?? null;
-                $p['price_list_emb'] = $priceMap[$key]['embalagem']     ?? null;
+                $nome = mb_strtolower(trim($p['produto'] ?? ''), 'UTF-8');
+                $emb  = number_format((float)($p['embalagem'] ?? 0), 3, '.', '');
+                $key  = $nome . '|' . $emb;
+                $p['price_list_usd'] = $priceMap[$key] ?? null;
             }
             unset($p);
         } catch (Throwable $plEx) {
-            // cot_price_list não acessível — retorna produtos sem price list
-            foreach ($produtos as &$p) {
-                $p['price_list_usd'] = null;
-                $p['price_list_emb'] = null;
-            }
+            foreach ($produtos as &$p) { $p['price_list_usd'] = null; }
             unset($p);
         }
 
-        // Força encoding UTF-8 em campos de texto
-        $flags = JSON_UNESCAPED_UNICODE | JSON_PARTIAL_OUTPUT_ON_ERROR;
-        echo json_encode($produtos, $flags);
+        echo json_encode($produtos, JSON_UNESCAPED_UNICODE | JSON_PARTIAL_OUTPUT_ON_ERROR);
 
     } catch (PDOException $e) {
-        // Erro na query principal — retorna array vazio com info de debug
-        $flags = JSON_UNESCAPED_UNICODE;
-        echo json_encode(['__erro' => $e->getMessage()], $flags);
+        echo json_encode(['__erro' => $e->getMessage()], JSON_UNESCAPED_UNICODE);
     }
     exit();
 }
