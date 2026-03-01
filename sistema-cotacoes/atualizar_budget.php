@@ -162,7 +162,10 @@ try {
     <div class="alert alert-success alert-dismissible fade show d-flex align-items-center gap-2 mb-4" role="alert">
         <i class="bi bi-check-circle-fill fs-5"></i>
         <div>
-            Importação concluída com sucesso! <strong><?= htmlspecialchars((int)$_GET['sucesso']) ?> linha(s)</strong> processada(s).
+            Base substituída com sucesso! <strong><?= htmlspecialchars((int)$_GET['sucesso']) ?> linha(s)</strong> importada(s).
+            <?php if (!empty($_GET['not_found'])): ?>
+                <br><small class="text-danger fw-semibold">⚠️ Colunas NÃO detectadas: <code><?= htmlspecialchars($_GET['not_found']) ?></code> — verifique o cabeçalho do CSV.</small>
+            <?php endif; ?>
         </div>
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>

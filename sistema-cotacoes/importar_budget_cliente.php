@@ -5,169 +5,188 @@ require_once 'conexao.php';
 if (!isset($_SESSION['representante_email'])) {
     header('Location: index.html'); exit();
 }
-
 if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !isset($_FILES['arquivo_csv'])) {
     header('Location: atualizar_budget.php'); exit();
 }
 
 $file = $_FILES['arquivo_csv'];
 if ($file['error'] !== UPLOAD_ERR_OK) {
-    header("Location: atualizar_budget.php?erro=" . urlencode("Erro no upload do arquivo.")); exit();
+    header("Location: atualizar_budget.php?erro=" . urlencode("Erro no upload.")); exit();
 }
-$ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
-if ($ext !== 'csv') {
-    header("Location: atualizar_budget.php?erro=" . urlencode("Apenas arquivos CSV são permitidos.")); exit();
+if (strtolower(pathinfo($file['name'], PATHINFO_EXTENSION)) !== 'csv') {
+    header("Location: atualizar_budget.php?erro=" . urlencode("Apenas arquivos .csv são permitidos.")); exit();
 }
-
-// ─── Mapa de detecção de colunas ─────────────────────────────────────────────
-// Chave: fragmento para busca (uppercase), Valor: campo no array de linha
-$colMap = [
-    'CNPJ'               => 'cnpj',
-    'RAZAO SOCIAL'       => 'razao_social',
-    'RAZÃO SOCIAL'       => 'razao_social',
-    'CLIENTE ORIGEM'     => 'cliente_origem',
-    'TERCEIRISTA'        => 'terceirista',
-    'FABRICANTE'         => 'fabricante',
-    'CONCAT'             => 'concat',
-    'TIPO'               => 'tipo',
-    'VENDEDOR AJUSTADO'  => 'vendedor_ajustado',   // deve vir ANTES de VENDEDOR
-    'EMBALAGEM'          => 'embalagem',
-    // KG
-    'TOTAL KG'           => 'kg_historico',
-    'KG REALIZADO 2025'  => 'kg_realizado_2025',
-    'KG ORÇADO 2026'     => 'kg_orcado_2026',
-    'KG ORCADO 2026'     => 'kg_orcado_2026',
-    'KG REALIZADO 2026'  => 'kg_realizado_2026',
-    // Preços BRL
-    'PREÇO REALIZADO ENTRE'   => 'preco_hist_brl',
-    'PRECO REALIZADO ENTRE'   => 'preco_hist_brl',
-    'PREÇO REALIZADO 2025'    => 'preco_2025_brl',
-    'PRECO REALIZADO 2025'    => 'preco_2025_brl',
-    'REAJUSTE SUGERIDO'       => 'reajuste_sugerido',
-    'PREÇO SUGERIDO '         => 'preco_sugerido_brl',   // espaço intencional para prioridade
-    'PRECO SUGERIDO '         => 'preco_sugerido_brl',
-    'PREÇO ORÇADO 2026'       => 'preco_orcado_2026_brl',
-    'PRECO ORCADO 2026'       => 'preco_orcado_2026_brl',
-    'PREÇO REALIZADO 2026'    => 'preco_realizado_2026_brl',
-    'PRECO REALIZADO 2026'    => 'preco_realizado_2026_brl',
-    // Preços USD
-    'PREÇO REALIZADO ENTRE 17' => 'preco_hist_usd',   // fallback — mapeado abaixo por posição USD
-    'PREÇO REALIZADO 2025 (MÉ' => 'preco_2025_usd',
-    'PREÇO SUGERIDO  USD'      => 'preco_sugerido_usd',
-    'PREÇO ORÇADO 2026  USD'   => 'preco_orcado_2026_usd',
-    'PREÇO REALIZADO 2026  USD'=> 'preco_realizado_2026_usd',
-    // Venda NET
-    'VENDA NET REALIZADO 2025' => 'venda_net_2025',
-    'VENDA NET  ORÇADO 2026'   => 'venda_net_orcado_2026',
-    'VENDA NET ORCADO 2026'    => 'venda_net_orcado_2026',
-    'VENDA NET  REALIZADO 2026'=> 'venda_net_realizado_2026',
-    // Custo
-    'CUSTO UNT REALIZADO 2025' => 'custo_unt_realizado_2025',
-    'CUSTO UNT ORCADO DANI'    => 'custo_unt_orcado_dani',
-    'CUSTO UNT ORÇADO DANI'    => 'custo_unt_orcado_dani',
-    'COMPARATIVO CUSTO'        => 'comp_custo_dani',
-    'CUSTO UNT  ORÇADO 2026'   => 'custo_unt_orcado_2026',
-    'CUSTO UNT  ORCADO 2026'   => 'custo_unt_orcado_2026',
-    'CUSTO UNT  REALIZADO 2026'=> 'custo_unt_realizado_2026',
-    'CUSTO TOTAL REALIZADO 2025'  => 'custo_total_2025',
-    'CUSTO TOTAL  ORÇADO 2026'    => 'custo_total_orcado_2026',
-    'CUSTO TOTAL  ORCADO 2026'    => 'custo_total_orcado_2026',
-    'CUSTO TOTAL  REALIZADO 2026' => 'custo_total_realizado_2026',
-    // Lucro
-    'LUCRO LIQUIDO REALIZADO 2025'=> 'lucro_liq_2025',
-    'LUCRO LIQUIDO ORÇADO 2026'   => 'lucro_liq_orcado_2026',
-    'LUCRO LIQUIDO ORCADO 2026'   => 'lucro_liq_orcado_2026',
-    'LUCRO LIQUIDO REALIZADO 2026'=> 'lucro_liq_realizado_2026',
-    // GM
-    'GM% REALIZADO 2025'    => 'gm_2025',
-    'GM% ORÇADO 2026'       => 'gm_orcado_2026',
-    'GM% ORCADO 2026'       => 'gm_orcado_2026',
-    'GM% REALIZADO 2026'    => 'gm_realizado_2026',
-    // EXW/LANDED
-    'LOTE ECONÔMICO'        => 'lote_economico_kg',
-    'LOTE ECONOMICO'        => 'lote_economico_kg',
-    'EXW 2026 (KG) USD'     => 'exw_2026_kg_usd',
-    'EXW 2026 (TOTAL) USD'  => 'exw_2026_total_usd',
-    'LANDED 2026 (KG) USD'  => 'landed_2026_kg_usd',
-    'LANDED 2026 (TOTAL)'   => 'landed_2026_total',
-    // Outros
-    'COME TARIOS SUPPLY'    => 'comentarios_supply',
-    'COME'                  => 'comentarios_supply',
-    'PREÇO AJUSTADO'        => 'preco_ajustado',
-    'PRECO AJUSTADO'        => 'preco_ajustado',
-];
-
-// Produto mapeado separadamente (muitas colunas contêm "PRECO" — queremos só "PRODUTO")
-$colProduto = 'produto';
-// Vendedor (genérico, mapear depois de vendedor_ajustado)
-$colVendedor = 'vendedor';
 
 ini_set('max_execution_time', 300);
 
+// ─── Helper: remove acentos para comparação accent-insensitive ────────────────
+function normalizeKey($str) {
+    $str = mb_strtoupper(trim($str), 'UTF-8');
+    $from = ['Á','À','Ã','Â','Ä','É','È','Ê','Ë','Í','Ì','Î','Ï',
+             'Ó','Ò','Õ','Ô','Ö','Ú','Ù','Û','Ü','Ç','Ñ'];
+    $to   = ['A','A','A','A','A','E','E','E','E','I','I','I','I',
+             'O','O','O','O','O','U','U','U','U','C','N'];
+    return str_replace($from, $to, $str);
+}
+
+// ─── Mapa: fragmento normalizado (sem acentos) → campo DB ────────────────────
+// Ordem importa: fragmentos mais específicos primeiro
+$colMapRaw = [
+    // Identificação
+    'CNPJ'                               => 'cnpj',
+    'RAZAO SOCIAL'                       => 'razao_social',
+    'CLIENTE ORIGEM'                     => 'cliente_origem',
+    'TERCEIRISTA'                        => 'terceirista',
+    'FABRICANTE'                         => 'fabricante',
+    'CONCAT'                             => 'concat',
+    'TIPO'                               => 'tipo',
+    'VENDEDOR AJUSTADO'                  => 'vendedor_ajustado',  // antes de VENDEDOR
+    'EMBALAGEM'                          => 'embalagem',
+    // KG — mais específicos primeiro
+    'TOTAL KG'                           => 'kg_historico',
+    'KG REALIZADO 2025'                  => 'kg_realizado_2025',
+    'KG ORCADO 2026'                     => 'kg_orcado_2026',
+    'KG REALIZADO 2026'                  => 'kg_realizado_2026',
+    // Preços BRL — mais específicos primeiro
+    'PRECO REALIZADO ENTRE'              => 'preco_hist_brl',
+    'PRECO REALIZADO 2025'               => 'preco_2025_brl',
+    'REAJUSTE SUGERIDO'                  => 'reajuste_sugerido',
+    'PRECO SUGERIDO  USD'                => 'preco_sugerido_usd',  // USD antes do BRL
+    'PRECO SUGERIDO'                     => 'preco_sugerido_brl',
+    'PRECO ORCADO 2026  USD'             => 'preco_orcado_2026_usd',
+    'PRECO ORCADO 2026'                  => 'preco_orcado_2026_brl',
+    'PRECO REALIZADO 2026  USD'          => 'preco_realizado_2026_usd',
+    'PRECO REALIZADO 2026'               => 'preco_realizado_2026_brl',
+    // USD (em sequência, depois dos BRL)
+    'PRECO REALIZADO ENTRE 17'           => 'preco_hist_usd',
+    'PRECO REALIZADO 2025 (MEDIA) USD'   => 'preco_2025_usd',
+    // Venda NET — atenção: ORCADO antes de genérico
+    'VENDA NET REALIZADO 2025'           => 'venda_net_2025',
+    'VENDA NET  ORCADO 2026'             => 'venda_net_orcado_2026',
+    'VENDA NET  REALIZADO 2026'          => 'venda_net_realizado_2026',
+    'VENDA NET REALIZADO 2026'           => 'venda_net_realizado_2026',
+    'VENDA NET  ORCADO'                  => 'venda_net_orcado_2026',
+    // Custo
+    'CUSTO UNT REALIZADO 2025'           => 'custo_unt_realizado_2025',
+    'CUSTO UNT ORCADO DANI'              => 'custo_unt_orcado_dani',
+    'COMPARATIVO CUSTO'                  => 'comp_custo_dani',
+    'CUSTO UNT  ORCADO 2026'             => 'custo_unt_orcado_2026',
+    'CUSTO UNT  REALIZADO 2026'          => 'custo_unt_realizado_2026',
+    'CUSTO TOTAL REALIZADO 2025'         => 'custo_total_2025',
+    'CUSTO TOTAL  ORCADO 2026'           => 'custo_total_orcado_2026',
+    'CUSTO TOTAL  REALIZADO 2026'        => 'custo_total_realizado_2026',
+    // Lucro
+    'LUCRO LIQUIDO REALIZADO 2025'       => 'lucro_liq_2025',
+    'LUCRO LIQUIDO ORCADO 2026'          => 'lucro_liq_orcado_2026',
+    'LUCRO LIQUIDO REALIZADO 2026'       => 'lucro_liq_realizado_2026',
+    // GM
+    'GM% REALIZADO 2025'                 => 'gm_2025',
+    'GM% ORCADO 2026'                    => 'gm_orcado_2026',
+    'GM% REALIZADO 2026'                 => 'gm_realizado_2026',
+    // EXW / LANDED
+    'LOTE ECONOMICO'                     => 'lote_economico_kg',
+    'EXW 2026 (KG) USD'                  => 'exw_2026_kg_usd',
+    'EXW 2026 (TOTAL) USD'               => 'exw_2026_total_usd',
+    'LANDED 2026 (KG) USD'               => 'landed_2026_kg_usd',
+    'LANDED 2026 (TOTAL)'                => 'landed_2026_total',
+    // Outros
+    'COME'                               => 'comentarios_supply',  // COMENTARIOS SUPPLY
+    'PRECO AJUSTADO'                     => 'preco_ajustado',
+];
+
+// Normaliza as chaves do mapa (sem acentos)
+$colMap = [];
+foreach ($colMapRaw as $k => $v) {
+    $colMap[normalizeKey($k)] = $v;
+}
+
 $handle = fopen($file['tmp_name'], 'r');
-// Detecta BOM UTF-8
+
+// Remove BOM se existir
 $bom = fread($handle, 3);
 if ($bom !== "\xEF\xBB\xBF") rewind($handle);
 
 try {
-    // ─── Detectar separador ────────────────────────────────────────────────────
+    // Detecta separador
     $firstLine = fgets($handle);
     rewind($handle);
     $bom2 = fread($handle, 3);
     if ($bom2 !== "\xEF\xBB\xBF") rewind($handle);
     $sep = (substr_count($firstLine, ';') >= substr_count($firstLine, ',')) ? ';' : ',';
 
-    // ─── Ler header ───────────────────────────────────────────────────────────
-    $header = fgetcsv($handle, 0, $sep);
-    if (!$header) throw new Exception("Arquivo CSV vazio ou inválido.");
+    // Lê header
+    $rawHeader = fgetcsv($handle, 0, $sep);
+    if (!$rawHeader) throw new Exception("Arquivo CSV vazio ou inválido.");
 
-    // Normalizar headers: uppercase + remove acentos para comparações
-    $headerNorm = array_map(function($h) {
+    // Normaliza headers (sem acentos, uppercase, trimado)
+    $headerNorm = [];
+    foreach ($rawHeader as $h) {
         $h = mb_convert_encoding(trim($h), 'UTF-8', 'ISO-8859-1, UTF-8');
-        return mb_strtoupper($h, 'UTF-8');
-    }, $header);
-
-    // ─── Montar índice de colunas ─────────────────────────────────────────────
-    $idx = []; // $idx['campo_db'] = posição no CSV
-
-    // Produto: coluna cujo header normalizado seja exatamente 'PRODUTO'
-    foreach ($headerNorm as $i => $h) {
-        if ($h === 'PRODUTO') { $idx[$colProduto] = $i; break; }
+        $headerNorm[] = normalizeKey($h);
     }
-    // Fallback produto
-    if (!isset($idx[$colProduto])) {
+
+    // Monta índice de colunas
+    $idx = [];
+
+    // PRODUTO: header normalizado = exatamente 'PRODUTO'
+    foreach ($headerNorm as $i => $h) {
+        if ($h === 'PRODUTO') { $idx['produto'] = $i; break; }
+    }
+    // Fallback produto: contém 'PRODUTO' mas não é 'COD PRODUTO' etc.
+    if (!isset($idx['produto'])) {
         foreach ($headerNorm as $i => $h) {
-            if (strpos($h, 'PRODUTO') !== false) { $idx[$colProduto] = $i; break; }
+            if (strpos($h, 'PRODUTO') !== false && strpos($h, 'COD') === false) {
+                $idx['produto'] = $i; break;
+            }
         }
     }
 
-    // Vendedor ajustado primeiro (contém "VENDEDOR"), depois vendedor genérico
+    // VENDEDOR AJUSTADO antes de VENDEDOR genérico
     foreach ($headerNorm as $i => $h) {
         if (strpos($h, 'VENDEDOR AJUSTADO') !== false) { $idx['vendedor_ajustado'] = $i; break; }
     }
     foreach ($headerNorm as $i => $h) {
-        if ($h === 'VENDEDOR' || (strpos($h, 'VENDEDOR') !== false && !isset($idx['vendedor_ajustado']))) {
-            if (!isset($idx['vendedor'])) $idx['vendedor'] = $i;
-        }
-    }
-    // Vendedor: header = exatamente "VENDEDOR"
-    foreach ($headerNorm as $i => $h) {
         if ($h === 'VENDEDOR') { $idx['vendedor'] = $i; break; }
     }
-
-    // Demais mapeamentos por fragmento
-    foreach ($colMap as $fragment => $campo) {
-        if (isset($idx[$campo])) continue; // já mapeado
-        $fragNorm = mb_strtoupper($fragment, 'UTF-8');
+    // Fallback: qualquer header que seja só VENDEDOR (sem "AJUSTADO")
+    if (!isset($idx['vendedor'])) {
         foreach ($headerNorm as $i => $h) {
-            if (strpos($h, $fragNorm) !== false) {
+            if ($h === 'VENDEDOR' || ($h === 'VENDEDOR' && !isset($idx['vendedor']))) {
+                $idx['vendedor'] = $i; break;
+            }
+        }
+    }
+
+    // Demais colunas: por fragmento (ordem do colMap)
+    foreach ($colMap as $fragment => $campo) {
+        if (isset($idx[$campo])) continue;
+        foreach ($headerNorm as $i => $h) {
+            if (strpos($h, $fragment) !== false) {
                 $idx[$campo] = $i;
                 break;
             }
         }
     }
 
-    // ─── Prepare UPSERT ───────────────────────────────────────────────────────
+    // ─── Helpers ──────────────────────────────────────────────────────────────
+    function getVal($data, $idx, $campo) {
+        if (!isset($idx[$campo])) return null;
+        $v = isset($data[$idx[$campo]]) ? trim($data[$idx[$campo]]) : '';
+        if ($v === '' || $v === '-') return null;
+        $v = mb_convert_encoding($v, 'UTF-8', 'ISO-8859-1, UTF-8');
+        return $v;
+    }
+    function getNum($data, $idx, $campo) {
+        $v = getVal($data, $idx, $campo);
+        if ($v === null) return null;
+        // Remove separador de milhar (ponto) e troca vírgula decimal por ponto
+        $v = preg_replace('/\.(?=\d{3})/', '', $v); // remove ponto-milhar
+        $v = str_replace(',', '.', $v);
+        $v = preg_replace('/[^0-9.\-]/', '', $v);
+        return is_numeric($v) ? $v : null;
+    }
+
+    // ─── Prepare INSERT ───────────────────────────────────────────────────────
     $campos = ['cnpj','razao_social','cliente_origem','terceirista','produto','fabricante',
                'concat','tipo','vendedor','vendedor_ajustado','embalagem',
                'kg_historico','kg_realizado_2025','kg_orcado_2026','kg_realizado_2026',
@@ -183,38 +202,22 @@ try {
                'comentarios_supply','preco_ajustado'];
 
     $placeholders = ':' . implode(', :', $campos);
-    $updates = implode(', ', array_map(fn($c) => "`$c` = VALUES(`$c`)", array_filter($campos, fn($c) => $c !== 'concat')));
+    $sqlInsert = "INSERT INTO `cot_budget_cliente` (`" . implode('`, `', $campos) . "`) VALUES ($placeholders)";
+    $stmt = $pdo->prepare($sqlInsert);
 
-    $sql = "INSERT INTO `cot_budget_cliente` (`" . implode('`, `', $campos) . "`)
-            VALUES ($placeholders)
-            ON DUPLICATE KEY UPDATE $updates, `updated_at` = CURRENT_TIMESTAMP";
-    $stmt = $pdo->prepare($sql);
-
-    // ─── Helpers ──────────────────────────────────────────────────────────────
-    function getVal($data, $idx, $campo) {
-        if (!isset($idx[$campo])) return null;
-        $v = trim($data[$idx[$campo]] ?? '');
-        if ($v === '' || $v === '-') return null;
-        return mb_convert_encoding($v, 'UTF-8', 'ISO-8859-1, UTF-8');
-    }
-    function getNum($data, $idx, $campo) {
-        $v = getVal($data, $idx, $campo);
-        if ($v === null) return null;
-        $v = str_replace(['.', ' '], ['', ''], $v); // remove separador de milhar
-        $v = str_replace(',', '.', $v);
-        $v = preg_replace('/[^0-9.\-]/', '', $v);
-        return is_numeric($v) ? $v : null;
-    }
-
-    // ─── Processar linhas ─────────────────────────────────────────────────────
     $pdo->beginTransaction();
+
+    // ── TRUNCATE: apaga a base inteira antes de importar ──────────────────────
+    $pdo->exec("TRUNCATE TABLE cot_budget_cliente");
+
     $inserted = 0;
+    $skipped  = 0;
 
     while (($data = fgetcsv($handle, 0, $sep)) !== false) {
-        if (empty(array_filter($data))) continue; // linha em branco
+        if (empty(array_filter($data))) continue;
 
         $concat = getVal($data, $idx, 'concat');
-        if (empty($concat)) continue; // sem concat = linha inválida
+        if (empty($concat)) { $skipped++; continue; }
 
         $params = [
             ':cnpj'                    => getVal($data, $idx, 'cnpj'),
@@ -276,12 +279,24 @@ try {
     $pdo->commit();
     fclose($handle);
 
-    header("Location: atualizar_budget.php?sucesso=" . $inserted);
+    // Grava diagnóstico de colunas detectadas para debug
+    $detected = [];
+    foreach ($idx as $campo => $pos) {
+        $detected[] = $campo . '=' . ($rawHeader[$pos] ?? '?');
+    }
+    $notDetected = [];
+    $criticals = ['kg_orcado_2026', 'kg_realizado_2025', 'produto', 'cnpj', 'concat', 'embalagem'];
+    foreach ($criticals as $c) {
+        if (!isset($idx[$c])) $notDetected[] = $c;
+    }
+
+    $msg = $inserted . '&not_found=' . urlencode(implode(',', $notDetected));
+    header("Location: atualizar_budget.php?sucesso=" . $msg);
     exit();
 
 } catch (Exception $e) {
     if ($pdo->inTransaction()) $pdo->rollBack();
-    fclose($handle);
-    header("Location: atualizar_budget.php?erro=" . urlencode("Erro na importação: " . $e->getMessage()));
+    if (isset($handle) && is_resource($handle)) fclose($handle);
+    header("Location: atualizar_budget.php?erro=" . urlencode("Erro: " . $e->getMessage()));
     exit();
 }

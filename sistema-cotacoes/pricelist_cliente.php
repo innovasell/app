@@ -309,9 +309,9 @@ async function selecionarCliente(data) {
 
         loadingState.style.display = 'none';
 
-        // Verifica se a resposta é um array válido (protege contra {__erro:...})
-        if (!Array.isArray(rawProd)) {
-            const msg = rawProd?.__erro || 'Resposta inválida da API';
+        // Nova estrutura: {produtos: [...], __sem_orcado: bool} ou {__erro: "..."}
+        if (rawProd?.__erro) {
+            const msg = rawProd.__erro;
             tableCard.style.display = 'block';
             emptyState.style.display = 'block';
             emptyState.innerHTML = `<i class="bi bi-exclamation-triangle fs-2 d-block mb-2 text-danger"></i>
@@ -320,8 +320,24 @@ async function selecionarCliente(data) {
             return;
         }
 
-        todosOsProdutos = rawProd;
+        // Extrai produtos e flag de sem orçado
+        const semOrcado = rawProd?.__sem_orcado ?? false;
+        todosOsProdutos = Array.isArray(rawProd?.produtos) ? rawProd.produtos
+                        : Array.isArray(rawProd) ? rawProd : [];
+
         renderClientCard(resumo);
+
+        // Aviso quando KG Orçado 2026 não foi mapeado na importação
+        if (semOrcado && todosOsProdutos.length > 0) {
+            const warn = document.createElement('div');
+            warn.className = 'alert alert-warning alert-dismissible fade show mb-3';
+            warn.innerHTML = `<i class="bi bi-exclamation-triangle me-1"></i>
+                <strong>Atenção:</strong> Nenhum produto com KG Orçado 2026 preenchido. Mostrando <strong>todos os produtos</strong> do cliente.
+                Reimporte o CSV após verificar a coluna <code>KG Orçado 2026</code>.
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>`;
+            document.querySelector('.container.pb-5').insertBefore(warn, tableCard);
+        }
+
         renderTabela(todosOsProdutos);
     } catch(e) {
         loadingState.style.display = 'none';

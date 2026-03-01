@@ -73,6 +73,20 @@ if ($action === 'buscar_produtos') {
         $stmt->execute([':cnpj' => $cnpj]);
         $produtos = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+        // Fallback: se nenhum produto com kg_orcado_2026 > 0, avisa e retorna todos
+        $semOrcado = false;
+        if (empty($produtos)) {
+            $sqlAll = str_replace(
+                "AND b.kg_orcado_2026 IS NOT NULL\n                  AND b.kg_orcado_2026 > 0",
+                "",
+                $sql
+            );
+            $stmtAll = $pdo->prepare($sqlAll);
+            $stmtAll->execute([':cnpj' => $cnpj]);
+            $produtos = $stmtAll->fetchAll(PDO::FETCH_ASSOC);
+            $semOrcado = true;
+        }
+
         // ── 2. Enriquece com price list (tolerante a falha) ───────────────────
         // Chave composta: nome_produto + '|' + embalagem (arredondada 3 casas)
         try {
@@ -96,7 +110,11 @@ if ($action === 'buscar_produtos') {
             unset($p);
         }
 
-        echo json_encode($produtos, JSON_UNESCAPED_UNICODE | JSON_PARTIAL_OUTPUT_ON_ERROR);
+        $result = [
+            'produtos'   => $produtos,
+            '__sem_orcado' => $semOrcado,
+        ];
+        echo json_encode($result, JSON_UNESCAPED_UNICODE | JSON_PARTIAL_OUTPUT_ON_ERROR);
 
     } catch (PDOException $e) {
         echo json_encode(['__erro' => $e->getMessage()], JSON_UNESCAPED_UNICODE);
