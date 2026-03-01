@@ -14,7 +14,7 @@ if (!isset($_SESSION['representante_email'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Price List por Cliente</title>
+    <title>BUDGET por Cliente (Pricelist)</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
     <style>
@@ -133,8 +133,8 @@ if (!isset($_SESSION['representante_email'])) {
 
 <div class="page-header">
     <div class="container">
-        <h1><i class="bi bi-tags me-2"></i>Price List por Cliente</h1>
-        <p class="mb-0 opacity-75">Consulte os produtos, históricos de compra e preços negociados por cliente.</p>
+        <h1><i class="bi bi-tags me-2"></i>BUDGET por Cliente <small class="opacity-75 fs-6">(Pricelist)</small></h1>
+        <p class="mb-0 opacity-75">Consulte os produtos, histórico de compra e preços negociados por cliente.</p>
     </div>
 </div>
 
@@ -442,7 +442,6 @@ function fmtUSD(v) { if (!v) return '<span class="text-muted">—</span>'; retur
 function fmtBRL(v) { if (!v) return '<span class="text-muted">—</span>'; return 'R$ ' + Number(v).toLocaleString('pt-BR', {minimumFractionDigits:2,maximumFractionDigits:4}); }
 function fmtKg(v)  { if (!v) return '<span class="text-muted">—</span>'; return Number(v).toLocaleString('pt-BR', {minimumFractionDigits:3,maximumFractionDigits:3}); }
 </script>
-</body>
 
 <!-- ─── Modal Price List completo do produto ─────────────────────────────── -->
 <div class="modal fade" id="modalPricelist" tabindex="-1" aria-hidden="true">
@@ -486,15 +485,17 @@ function fmtKg(v)  { if (!v) return '<span class="text-muted">—</span>'; retur
 </div>
 
 <script>
-const _modalPL = new bootstrap.Modal(document.getElementById('modalPricelist'));
-
 async function abrirModalPricelist(nomeProduto) {
-    document.getElementById('plNomeProduto').textContent     = nomeProduto;
-    document.getElementById('plLoading').style.display       = 'block';
-    document.getElementById('plConteudo').style.display      = 'none';
-    document.getElementById('plBody').innerHTML              = '';
-    document.getElementById('plVazio').style.display         = 'none';
-    _modalPL.show();
+    // Inicialização lazy — garante que o elemento existe no DOM
+    const modalEl = document.getElementById('modalPricelist');
+    const modal   = bootstrap.Modal.getOrCreateInstance(modalEl);
+
+    document.getElementById('plNomeProduto').textContent = nomeProduto;
+    document.getElementById('plLoading').style.display   = 'block';
+    document.getElementById('plConteudo').style.display  = 'none';
+    document.getElementById('plBody').innerHTML          = '';
+    document.getElementById('plVazio').style.display     = 'none';
+    modal.show();
 
     try {
         const res  = await fetch('api_budget_cliente.php?action=buscar_pricelist_produto&produto=' + encodeURIComponent(nomeProduto));
@@ -515,7 +516,7 @@ async function abrirModalPricelist(nomeProduto) {
             const preco = r.preco_net_usd
                 ? '<strong class="text-success">$ ' + Number(r.preco_net_usd).toLocaleString('pt-BR', {minimumFractionDigits:2,maximumFractionDigits:4}) + '</strong>'
                 : '<span class="text-muted">—</span>';
-            const emb   = r.embalagem
+            const emb = r.embalagem
                 ? Number(r.embalagem).toLocaleString('pt-BR', {minimumFractionDigits:3}) + ' KG'
                 : '—';
             tr.innerHTML = `
@@ -537,4 +538,5 @@ async function abrirModalPricelist(nomeProduto) {
 }
 </script>
 
+</body>
 </html>

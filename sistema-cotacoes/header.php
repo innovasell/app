@@ -234,7 +234,7 @@ function is_active($item_key, $active_key, $grupo = false)
                   <li><hr class="dropdown-divider"></li>
                 <?php endif; ?>
                 <li><a class="dropdown-item <?php echo is_active('pricelist_cliente', $pagina_ativa) ? 'active' : ''; ?>"
-                       href="pricelist_cliente.php">Price List Clientes</a></li>
+                       href="pricelist_cliente.php">BUDGET 2026</a></li>
                 <li><a class="dropdown-item <?php echo is_active('atualizar_budget', $pagina_ativa) ? 'active' : ''; ?>"
                        href="atualizar_budget.php"><i class="fas fa-upload me-1 text-muted small"></i> Atualizar BUDGET</a></li>
               <?php endif; ?>
