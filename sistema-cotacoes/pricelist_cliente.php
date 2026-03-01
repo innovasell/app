@@ -213,9 +213,9 @@ if (!isset($_SESSION['representante_email'])) {
                         <th class="text-end">KG 17–24</th>
                         <th class="text-end">KG 2025</th>
                         <th class="text-end">KG Orç. 2026</th>
-                        <th class="text-end">Preço Ant. (R$)</th>
-                        <th class="text-end">Preço 2025 (R$)</th>
-                        <th class="text-end">Preço Orç. 2026</th>
+                        <th class="text-end">Preço Ant. (USD)</th>
+                        <th class="text-end">Preço 2025 (USD)</th>
+                        <th class="text-end">Preço Orç. 2026 (USD)</th>
                         <th class="text-end">Price List (USD)</th>
                     </tr>
                 </thead>
@@ -383,9 +383,9 @@ function renderTabela(produtos) {
             <td class="text-end">${fmtKg(p.kg_historico)}</td>
             <td class="text-end">${fmtKg(p.kg_realizado_2025)}</td>
             <td class="text-end">${fmtKg(p.kg_orcado_2026)}</td>
-            <td class="text-end">${fmtBRL(p.preco_hist_brl)}</td>
-            <td class="text-end">${fmtBRL(p.preco_2025_brl)}</td>
-            <td class="text-end">${fmtBRL(p.preco_orcado_2026_brl)}</td>
+            <td class="text-end">${fmtUSD(p.preco_hist_usd)}</td>
+            <td class="text-end">${fmtUSD(p.preco_2025_usd)}</td>
+            <td class="text-end">${fmtUSD(p.preco_orcado_2026_usd)}</td>
             <td class="text-end ${plClass}">${plVal}</td>`;
         produtosBody.appendChild(row);
     });
@@ -430,6 +430,7 @@ document.getElementById('btnExportar').addEventListener('click', () => {
 // ─── Helpers de formatação ─────────────────────────────────────────────────────
 function esc(s)    { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function fmt2(v)   { if (v === null || v === undefined || v === '') return '—'; return Number(v).toLocaleString('pt-BR', {minimumFractionDigits:2,maximumFractionDigits:4}); }
+function fmtUSD(v) { if (!v) return '<span class="text-muted">—</span>'; return '$ ' + Number(v).toLocaleString('pt-BR', {minimumFractionDigits:2,maximumFractionDigits:4}); }
 function fmtBRL(v) { if (!v) return '<span class="text-muted">—</span>'; return 'R$ ' + Number(v).toLocaleString('pt-BR', {minimumFractionDigits:2,maximumFractionDigits:4}); }
 function fmtKg(v)  { if (!v) return '<span class="text-muted">—</span>'; return Number(v).toLocaleString('pt-BR', {minimumFractionDigits:3,maximumFractionDigits:3}); }
 </script>
