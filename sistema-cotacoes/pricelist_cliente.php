@@ -217,6 +217,7 @@ if (!isset($_SESSION['representante_email'])) {
                         <th class="text-end">Preço 2025 (USD)</th>
                         <th class="text-end">Preço Orç. 2026 (USD)</th>
                         <th class="text-end">Price List (USD)</th>
+                        <th class="text-center"></th>
                     </tr>
                 </thead>
                 <tbody id="produtosBody">
@@ -351,7 +352,7 @@ function renderClientCard(r) {
     document.getElementById('clientCnpj').textContent   = r.cnpj || '—';
     document.getElementById('clientOrigem').textContent = r.cliente_origem || '—';
     document.getElementById('clientVendedor').innerHTML = `<i class="bi bi-person me-1"></i>${r.vendedor_ajustado || 'Não informado'}`;
-    document.getElementById('clientTotal').textContent  = (r.total_produtos || 0) + ' produto(s)';
+    document.getElementById('clientTotal').textContent  = (r.total_produtos || 0) + ' produtos adquiridos';
     clientCard.style.display = 'block';
 }
 
@@ -386,7 +387,14 @@ function renderTabela(produtos) {
             <td class="text-end">${fmtUSD(p.preco_hist_usd)}</td>
             <td class="text-end">${fmtUSD(p.preco_2025_usd)}</td>
             <td class="text-end">${fmtUSD(p.preco_orcado_2026_usd)}</td>
-            <td class="text-end ${plClass}">${plVal}</td>`;
+            <td class="text-end ${plClass}">${plVal}</td>
+            <td class="text-center">
+              <button class="btn btn-xs btn-outline-success py-0 px-1" style="font-size:.72rem;white-space:nowrap"
+                      onclick="abrirModalPricelist(${JSON.stringify(esc(p.produto))})"
+                      title="Ver Price List completo do produto">
+                <i class="bi bi-tags me-1"></i>PRICELIST
+              </button>
+            </td>`;
         produtosBody.appendChild(row);
     });
 }
@@ -435,4 +443,98 @@ function fmtBRL(v) { if (!v) return '<span class="text-muted">—</span>'; retur
 function fmtKg(v)  { if (!v) return '<span class="text-muted">—</span>'; return Number(v).toLocaleString('pt-BR', {minimumFractionDigits:3,maximumFractionDigits:3}); }
 </script>
 </body>
+
+<!-- ─── Modal Price List completo do produto ─────────────────────────────── -->
+<div class="modal fade" id="modalPricelist" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header" style="background:linear-gradient(90deg,#1a6b3c,#2d9e5f);color:#fff">
+        <h5 class="modal-title"><i class="bi bi-tags me-2"></i>Price List — <span id="plNomeProduto"></span></h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-0">
+        <div id="plLoading" class="text-center py-4">
+          <div class="spinner-border text-success" role="status"></div>
+          <p class="mt-2 text-muted small">Carregando...</p>
+        </div>
+        <div id="plConteudo" style="display:none">
+          <table class="table table-sm table-hover mb-0 small">
+            <thead class="table-light">
+              <tr>
+                <th>Fabricante</th>
+                <th>Código</th>
+                <th class="text-end">Emb. (KG)</th>
+                <th class="text-center">Frac.</th>
+                <th>Lead Time</th>
+                <th class="text-end fw-bold text-success">Preço Net (USD)</th>
+                <th>Classif.</th>
+              </tr>
+            </thead>
+            <tbody id="plBody"></tbody>
+          </table>
+          <p id="plVazio" class="text-center text-muted py-4 mb-0" style="display:none">
+            <i class="bi bi-inbox me-1"></i>Produto não encontrado no Price List atual.
+          </p>
+        </div>
+      </div>
+      <div class="modal-footer" style="background:#f8f9fa">
+        <small class="text-muted me-auto"><i class="bi bi-info-circle me-1"></i>Todas as embalagens disponíveis na price list geral.</small>
+        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Fechar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const _modalPL = new bootstrap.Modal(document.getElementById('modalPricelist'));
+
+async function abrirModalPricelist(nomeProduto) {
+    document.getElementById('plNomeProduto').textContent     = nomeProduto;
+    document.getElementById('plLoading').style.display       = 'block';
+    document.getElementById('plConteudo').style.display      = 'none';
+    document.getElementById('plBody').innerHTML              = '';
+    document.getElementById('plVazio').style.display         = 'none';
+    _modalPL.show();
+
+    try {
+        const res  = await fetch('api_budget_cliente.php?action=buscar_pricelist_produto&produto=' + encodeURIComponent(nomeProduto));
+        const data = await res.json();
+
+        document.getElementById('plLoading').style.display  = 'none';
+        document.getElementById('plConteudo').style.display = 'block';
+
+        const rows = Array.isArray(data) ? data : [];
+        if (rows.length === 0) {
+            document.getElementById('plVazio').style.display = 'block';
+            return;
+        }
+
+        const tbody = document.getElementById('plBody');
+        rows.forEach(r => {
+            const tr    = document.createElement('tr');
+            const preco = r.preco_net_usd
+                ? '<strong class="text-success">$ ' + Number(r.preco_net_usd).toLocaleString('pt-BR', {minimumFractionDigits:2,maximumFractionDigits:4}) + '</strong>'
+                : '<span class="text-muted">—</span>';
+            const emb   = r.embalagem
+                ? Number(r.embalagem).toLocaleString('pt-BR', {minimumFractionDigits:3}) + ' KG'
+                : '—';
+            tr.innerHTML = `
+                <td>${esc(r.fabricante || '—')}</td>
+                <td><code>${esc(r.codigo || '—')}</code></td>
+                <td class="text-end">${emb}</td>
+                <td class="text-center">${esc(r.fracionado || '—')}</td>
+                <td class="text-muted">${esc(r.lead_time || '—')}</td>
+                <td class="text-end">${preco}</td>
+                <td class="text-muted small">${esc(r.classificacao || '')}</td>`;
+            tbody.appendChild(tr);
+        });
+    } catch(e) {
+        document.getElementById('plLoading').style.display  = 'none';
+        document.getElementById('plConteudo').style.display = 'block';
+        document.getElementById('plVazio').innerHTML = '<i class="bi bi-exclamation-triangle text-danger me-1"></i>Erro: ' + e.message;
+        document.getElementById('plVazio').style.display = 'block';
+    }
+}
+</script>
+
 </html>

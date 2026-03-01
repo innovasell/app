@@ -155,4 +155,25 @@ if ($action === 'resumo_cliente') {
     exit();
 }
 
+// ─── Buscar todas as embalagens de um produto na cot_price_list ───────────────
+if ($action === 'buscar_pricelist_produto') {
+    $produto = trim($_GET['produto'] ?? '');
+    if (empty($produto)) { echo json_encode([]); exit(); }
+
+    try {
+        $stmt = $pdo->prepare(
+            "SELECT fabricante, codigo, embalagem, fracionado, lead_time, preco_net_usd, classificacao
+             FROM cot_price_list
+             WHERE LOWER(TRIM(produto)) = LOWER(TRIM(:produto))
+             ORDER BY embalagem ASC"
+        );
+        $stmt->execute([':produto' => $produto]);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        echo json_encode($rows, JSON_UNESCAPED_UNICODE);
+    } catch (PDOException $e) {
+        echo json_encode(['erro' => $e->getMessage()]);
+    }
+    exit();
+}
+
 echo json_encode(['erro' => 'Ação inválida']);
