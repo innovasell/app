@@ -207,8 +207,8 @@ try {
 
     $pdo->beginTransaction();
 
-    // ── TRUNCATE: apaga a base inteira antes de importar ──────────────────────
-    $pdo->exec("TRUNCATE TABLE cot_budget_cliente");
+    // ── Apaga todos os registros antes de importar (DELETE respeita transação) ─
+    $pdo->exec("DELETE FROM cot_budget_cliente");
 
     $inserted = 0;
     $skipped  = 0;
