@@ -119,9 +119,14 @@ try {
     if (!$rawHeader) throw new Exception("Arquivo CSV vazio ou inválido.");
 
     // Normaliza headers (sem acentos, uppercase, trimado)
+    // Só converte encoding se o header NÃO for UTF-8 válido
     $headerNorm = [];
     foreach ($rawHeader as $h) {
-        $h = mb_convert_encoding(trim($h), 'UTF-8', 'ISO-8859-1, UTF-8');
+        $h = trim($h);
+        if (!mb_detect_encoding($h, 'UTF-8', /* strict */ true)) {
+            // ISO-8859-1 / Windows-1252 → converte para UTF-8
+            $h = mb_convert_encoding($h, 'UTF-8', 'ISO-8859-1');
+        }
         $headerNorm[] = normalizeKey($h);
     }
 
@@ -165,6 +170,30 @@ try {
                 $idx[$campo] = $i;
                 break;
             }
+        }
+    }
+
+    // ─── Fallbacks via regex (para colunas com acentos que podem corromper) ───
+    // kg_orcado_2026: qualquer header "KG ... 2026" que NÃO seja realizado/total
+    if (!isset($idx['kg_orcado_2026'])) {
+        foreach ($headerNorm as $i => $h) {
+            if (preg_match('/^KG\s.{2,20}2026$/i', $h)
+                && strpos($h, 'REALIZ') === false
+                && strpos($h, 'TOTAL')  === false) {
+                $idx['kg_orcado_2026'] = $i;
+                break;
+            }
+        }
+    }
+    // kg_orcado_2026: fallback ainda mais amplo — posição entre KG Realizado 2025 e KG Realizado 2026
+    if (!isset($idx['kg_orcado_2026'])
+        && isset($idx['kg_realizado_2025'])
+        && isset($idx['kg_realizado_2026'])) {
+        $posA = $idx['kg_realizado_2025'];
+        $posB = $idx['kg_realizado_2026'];
+        if ($posB - $posA === 2) {
+            // A coluna exatamente no meio provavelmente é KG Orçado 2026
+            $idx['kg_orcado_2026'] = $posA + 1;
         }
     }
 
