@@ -390,7 +390,8 @@ function renderTabela(produtos) {
             <td class="text-end ${plClass}">${plVal}</td>
             <td class="text-center">
               <button class="btn btn-xs btn-outline-success py-0 px-1" style="font-size:.72rem;white-space:nowrap"
-                      onclick="abrirModalPricelist(${JSON.stringify(esc(p.produto))})"
+                      data-produto="${esc(p.produto)}"
+                      onclick="abrirModalPricelist(this.dataset.produto)"
                       title="Ver Price List completo do produto">
                 <i class="bi bi-tags me-1"></i>PRICELIST
               </button>
