@@ -252,10 +252,10 @@ require_once 'db.php';
 
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td title="${item.representante}">${item.representante.substring(0,20)}...</td>
-                    <td>${item.data_nf}<br><small class="text-muted">NF: ${item.nfe}</small></td>
-                    <td>${item.codigo}<br><b>${item.embalagem}</b></td>
-                    <td title="${item.cliente}">${item.cliente.substring(0,25)}...</td>
+                    <td title="${item.representante ? item.representante : ''}">${item.representante ? item.representante.substring(0,20) + (item.representante.length > 20 ? '...' : '') : '-'}</td>
+                    <td>${item.data_nf ? item.data_nf : '-'}<br><small class="text-muted">NF: ${item.nfe}</small></td>
+                    <td title="${item.descricao ? item.descricao : ''}">${item.codigo}<br><b>${item.embalagem}</b><br><small class="text-muted" style="font-size: 0.75rem;">${item.descricao ? item.descricao.substring(0,25) + (item.descricao.length > 25 ? '...' : '') : ''}</small></td>
+                    <td title="${item.cliente ? item.cliente : ''}">${item.cliente ? item.cliente.substring(0,25) + (item.cliente.length > 25 ? '...' : '') : '-'}</td>
                     <td>R$ ${(item.venda_net).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2})}</td>
                     <td>R$ ${(item.preco_lista_brl).toLocaleString('pt-BR', {minimumFractionDigits:2})}</td>
                     <td>R$ ${(item.preco_net_un).toLocaleString('pt-BR', {minimumFractionDigits:2})}</td>

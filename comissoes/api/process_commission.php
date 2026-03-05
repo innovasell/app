@@ -182,6 +182,12 @@ try {
     $idxMovQtde      = findColumnIndex($movHeaders, 'QTDE');
     $idxMovValor     = findColumnIndex($movHeaders, 'VALOR'); // bruts
     
+    // Adicionais Movimentações 
+    $idxMovData      = findColumnIndex($movHeaders, 'DATA');
+    $idxMovRep       = findColumnIndex($movHeaders, 'REPRESENTANTE');
+    $idxMovCliente   = findColumnIndex($movHeaders, 'CLIENTE/REMETENTE');
+    if ($idxMovCliente === -1) $idxMovCliente = findColumnIndex($movHeaders, 'CLIENTE');
+
     // Impostos
     $idxMovIcms      = findColumnIndex($movHeaders, 'VALOR ICMS');
     $idxMovPis       = findColumnIndex($movHeaders, 'VALOR PIS');
@@ -257,16 +263,28 @@ try {
         // Limpa código (ex: 063004003) -> manter apenas os 9 digitos principais para a busca
         $codigo9 = substr($codigo, 0, 9);
 
-        // Encontra no mapPedidos para cruzar Representante, Cliente, PM (Nota Fiscal chave)
+        // Extrai dados contextuais da Movimentação
+        $data_mov_raw = ($idxMovData !== -1 && isset($row[$idxMovData])) ? trim($row[$idxMovData]) : '';
+        $data_nf_mov = null;
+        if (preg_match('/(\d{2})[\/\-](\d{2})[\/\-](\d{4})/', $data_mov_raw, $m)) {
+            $data_nf_mov = "{$m[3]}-{$m[2]}-{$m[1]}";
+        } elseif (preg_match('/(\d{4})[\/\-](\d{2})[\/\-](\d{2})/', $data_mov_raw, $m)) {
+            $data_nf_mov = "{$m[1]}-{$m[2]}-{$m[3]}";
+        }
+        $rep_mov = ($idxMovRep !== -1 && isset($row[$idxMovRep])) ? trim($row[$idxMovRep]) : '';
+        $cliente_mov = ($idxMovCliente !== -1 && isset($row[$idxMovCliente])) ? trim($row[$idxMovCliente]) : '';
+
+        // Encontra no mapPedidos para cruzar informações ou pegar PM (Nota Fiscal chave)
         // O $nfe costuma vir como "001/000023309"
         $partesNf = explode('/', $nfe);
         $nfBusca = end($partesNf);
         $nfBusca = ltrim($nfBusca, '0'); // tira zero para parear ex 23309
 
         $pedData = isset($mapPedidos[$nfBusca]) ? $mapPedidos[$nfBusca] : [];
-        $representante = $pedData['representante'] ?? '';
-        $cliente = $pedData['cliente'] ?? '';
-        $data_nf = $pedData['data_nf'] ?? null;
+        
+        $representante = !empty($rep_mov) ? $rep_mov : ($pedData['representante'] ?? '');
+        $cliente = !empty($cliente_mov) ? $cliente_mov : ($pedData['cliente'] ?? '');
+        $data_nf = !empty($data_nf_mov) ? $data_nf_mov : ($pedData['data_nf'] ?? null);
         $pm_dias = $pedData['pm_dias'] ?? 0;
 
         // Tenta buscar o preço de lista
