@@ -68,6 +68,7 @@ require_once 'db.php';
                     <li class="nav-item"><a class="nav-link active" href="upload.php">Upload NFs</a></li>
                     <li class="nav-item"><a class="nav-link" href="validacao.php">Validação</a></li>
                     <li class="nav-item"><a class="nav-link" href="config_cfop.php">Configurar CFOPs</a></li>
+                    <li class="nav-item"><a class="nav-link" href="comissoes.php">Cálculo de Comissões (Planilhas)</a></li>
                 </ul>
             </div>
         </div>
