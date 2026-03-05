@@ -47,10 +47,14 @@ $colMapRaw = [
     'KG REALIZADO 2025'                  => 'kg_realizado_2025',
     'KG ORCADO 2026'                     => 'kg_orcado_2026',
     'KG REALIZADO 2026'                  => 'kg_realizado_2026',
-    // Preços — USD mais específico SEMPRE antes do BRL genérico
-    'PRECO REALIZADO ENTRE 17'           => 'preco_hist_usd',       // USD: específico (17–23 Média USD)
-    'PRECO REALIZADO ENTRE'              => 'preco_hist_brl',       // BRL: genérico (deve vir depois)
-    'PRECO REALIZADO 2025 (MEDIA) USD'   => 'preco_2025_usd',       // USD 2025 específico
+    // Preços — fragmentos USD são sufixos ÚNICOS que não existem na coluna BRL
+    // CSV BRL: "Preço Realizado entre 17 e 23 (Média)"       → norm: "PRECO REALIZADO ENTRE 17 E 23 (MEDIA)"
+    // CSV USD: "Preço Realizado entre 17 e 23 (Média) USD"   → norm: "PRECO REALIZADO ENTRE 17 E 23 (MEDIA) USD"
+    'ENTRE 17 E 23 (MEDIA) USD'          => 'preco_hist_usd',       // termina com " USD" — único na col. USD
+    'PRECO REALIZADO ENTRE'              => 'preco_hist_brl',       // genérico — captura a col. BRL restante
+    // CSV BRL: "Preço Realizado 2025 (Média)"                → norm: "PRECO REALIZADO 2025 (MEDIA)"
+    // CSV USD: "Preço Realizado 2025 (Média) USD"            → norm: "PRECO REALIZADO 2025 (MEDIA) USD"
+    '2025 (MEDIA) USD'                   => 'preco_2025_usd',       // termina com " USD" — único na col. USD
     'PRECO REALIZADO 2025'               => 'preco_2025_brl',
     'REAJUSTE SUGERIDO'                  => 'reajuste_sugerido',
     'PRECO SUGERIDO  USD'                => 'preco_sugerido_usd',   // USD antes do BRL
