@@ -76,8 +76,8 @@ require_once 'db.php';
                     <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
                         <h5 class="mb-0 text-primary"><i class="bi bi-cloud-upload"></i> Novo Cálculo de Comissões</h5>
                         <div>
-                            <a href="templates/template_movimentacoes.csv" class="btn btn-outline-secondary btn-sm"><i class="bi bi-download"></i> Modelo Movimentações</a>
-                            <a href="templates/template_pedidos.csv" class="btn btn-outline-secondary btn-sm"><i class="bi bi-download"></i> Modelo Pedidos</a>
+                            <a href="api/download_template_planilhas.php?type=movimentacoes" class="btn btn-outline-secondary btn-sm"><i class="bi bi-download"></i> Modelo Movimentações</a>
+                            <a href="api/download_template_planilhas.php?type=pedidos" class="btn btn-outline-secondary btn-sm"><i class="bi bi-download"></i> Modelo Pedidos</a>
                         </div>
                     </div>
                     <div class="card-body">
