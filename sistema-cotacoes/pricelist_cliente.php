@@ -133,7 +133,7 @@ if (!isset($_SESSION['representante_email'])) {
 
 <div class="page-header">
     <div class="container">
-        <h1><i class="bi bi-tags me-2"></i>BUDGET por Cliente <small class="opacity-75 fs-6">(Pricelist)</small></h1>
+        <h1><i class="bi bi-tags me-2"></i>BUDGET por Cliente <small class="opacity-75 fs-6">(Budget 2026 v2.0)</small></h1>
         <p class="mb-0 opacity-75">Consulte os produtos, histórico de compra e preços negociados por cliente.</p>
     </div>
 </div>
