@@ -63,9 +63,16 @@ try {
         return mb_strtoupper(trim(str_replace(['"', "'"], "", $h)), 'UTF-8');
     }
 
-    // Helper: Find Column Index by partial name
+    // Helper: Find Column Index by exact match preferred
     function findColumnIndex($headers, $search) {
         $search = normalizeHeader($search);
+        // Primeiro: tentativa de match exato
+        foreach ($headers as $index => $header) {
+            if (normalizeHeader($header) === $search) {
+                return $index;
+            }
+        }
+        // Segundo: fallback parcial
         foreach ($headers as $index => $header) {
             if (strpos(normalizeHeader($header), $search) !== false) {
                 return $index;
@@ -215,9 +222,9 @@ try {
         $tipo = isset($row[$idxMovTipo]) ? mb_strtolower(trim($row[$idxMovTipo]), 'UTF-8') : '';
         $cfop = isset($row[$idxMovCfop]) ? trim($row[$idxMovCfop]) : '';
 
-        // Filtra apenas saídas tributáveis (CFOP 5xxx e 6xxx)
-        // Ignorar exigência rígida da palavra 'saída' no $tipo caso o CFOP já indique saída.
-        if (!str_starts_with($cfop, '5') && !str_starts_with($cfop, '6') && !str_starts_with($cfop, '7')) {
+        // Filtra apenas saídas tributáveis exatas definidas pelo usuário
+        $cfopsValidos = ['5102', '5123', '6102', '6123', '6106', '6110', '5106', '5119'];
+        if (!in_array($cfop, $cfopsValidos)) {
             $itemsIgnorados++;
             $motivosIgnorados['cfop']++;
             continue;

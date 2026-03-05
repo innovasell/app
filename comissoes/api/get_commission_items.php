@@ -17,6 +17,7 @@ try {
 
     // Formatar números para visualização
     foreach ($items as &$item) {
+        $item['data_nf'] = !empty($item['data_nf']) ? date('d/m/Y', strtotime($item['data_nf'])) : null;
         $item['valor_bruto'] = (float)$item['valor_bruto'];
         $item['venda_net'] = (float)$item['venda_net'];
         $item['preco_net_un'] = (float)$item['preco_net_un'];
