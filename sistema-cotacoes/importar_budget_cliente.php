@@ -47,19 +47,18 @@ $colMapRaw = [
     'KG REALIZADO 2025'                  => 'kg_realizado_2025',
     'KG ORCADO 2026'                     => 'kg_orcado_2026',
     'KG REALIZADO 2026'                  => 'kg_realizado_2026',
-    // Preços BRL — mais específicos primeiro
-    'PRECO REALIZADO ENTRE'              => 'preco_hist_brl',
+    // Preços — USD mais específico SEMPRE antes do BRL genérico
+    'PRECO REALIZADO ENTRE 17'           => 'preco_hist_usd',       // USD: específico (17–23 Média USD)
+    'PRECO REALIZADO ENTRE'              => 'preco_hist_brl',       // BRL: genérico (deve vir depois)
+    'PRECO REALIZADO 2025 (MEDIA) USD'   => 'preco_2025_usd',       // USD 2025 específico
     'PRECO REALIZADO 2025'               => 'preco_2025_brl',
     'REAJUSTE SUGERIDO'                  => 'reajuste_sugerido',
-    'PRECO SUGERIDO  USD'                => 'preco_sugerido_usd',  // USD antes do BRL
+    'PRECO SUGERIDO  USD'                => 'preco_sugerido_usd',   // USD antes do BRL
     'PRECO SUGERIDO'                     => 'preco_sugerido_brl',
     'PRECO ORCADO 2026  USD'             => 'preco_orcado_2026_usd',
     'PRECO ORCADO 2026'                  => 'preco_orcado_2026_brl',
     'PRECO REALIZADO 2026  USD'          => 'preco_realizado_2026_usd',
     'PRECO REALIZADO 2026'               => 'preco_realizado_2026_brl',
-    // USD (em sequência, depois dos BRL)
-    'PRECO REALIZADO ENTRE 17'           => 'preco_hist_usd',
-    'PRECO REALIZADO 2025 (MEDIA) USD'   => 'preco_2025_usd',
     // Venda NET — atenção: ORCADO antes de genérico
     'VENDA NET REALIZADO 2025'           => 'venda_net_2025',
     'VENDA NET  ORCADO 2026'             => 'venda_net_orcado_2026',

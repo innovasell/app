@@ -417,12 +417,12 @@ btnLimpar.addEventListener('click', () => {
 // ─── Exportar CSV ─────────────────────────────────────────────────────────────
 document.getElementById('btnExportar').addEventListener('click', () => {
     if (!todosOsProdutos.length) return;
-    const headers = ['Produto','Fabricante','Embalagem','KG 17-24','KG 2025','KG Orç.2026',
-                     'Preço Ant.BRL','Preço 2025 BRL','Preço Orç.2026','Price List USD'];
+    const headers = ['Produto','Fabricante','Embalagem (KG)','KG 17-24','KG 2025','KG Orç.2026',
+                     'Preço Ant. USD','Preço 2025 USD','Preço Orç.2026 USD','Price List USD'];
     const rows = todosOsProdutos.map(p => [
         p.produto, p.fabricante, p.embalagem, p.kg_historico, p.kg_realizado_2025,
-        p.kg_orcado_2026, p.preco_hist_brl, p.preco_2025_brl,
-        p.preco_orcado_2026_brl, p.price_list_usd
+        p.kg_orcado_2026, p.preco_hist_usd, p.preco_2025_usd,
+        p.preco_orcado_2026_usd, p.price_list_usd
     ].map(v => (v === null || v === undefined) ? '' : String(v).replace(/;/g, ',')));
 
     const bom  = '\xEF\xBB\xBF';
