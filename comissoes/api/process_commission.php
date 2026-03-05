@@ -202,13 +202,18 @@ try {
     $stmtPrice = $pdo->prepare("SELECT price_brl FROM cot_price_list WHERE codigo_produto = ? AND embalagem = ? ORDER BY id DESC LIMIT 1");
 
     $itemsAdicionados = 0;
+    $itemsIgnorados = 0;
+    $motivosIgnorados = ['cfop' => 0, 'valor_zero' => 0, 'sem_nfe' => 0];
 
     foreach ($movCsv['data'] as $row) {
         $tipo = isset($row[$idxMovTipo]) ? mb_strtolower(trim($row[$idxMovTipo]), 'UTF-8') : '';
         $cfop = isset($row[$idxMovCfop]) ? trim($row[$idxMovCfop]) : '';
 
-        // Filtra apenas saídas tributáveis (normalmente 5xxx e 6xxx)
-        if (strpos($tipo, 'sa') === false || (!str_starts_with($cfop, '5') && !str_starts_with($cfop, '6'))) {
+        // Filtra apenas saídas tributáveis (CFOP 5xxx e 6xxx)
+        // Ignorar exigência rígida da palavra 'saída' no $tipo caso o CFOP já indique saída.
+        if (!str_starts_with($cfop, '5') && !str_starts_with($cfop, '6') && !str_starts_with($cfop, '7')) {
+            $itemsIgnorados++;
+            $motivosIgnorados['cfop']++;
             continue;
         }
 
@@ -222,7 +227,17 @@ try {
         $pis        = $idxMovPis !== -1 && isset($row[$idxMovPis]) ? parseNumber($row[$idxMovPis]) : 0;
         $cofins     = $idxMovCofins !== -1 && isset($row[$idxMovCofins]) ? parseNumber($row[$idxMovCofins]) : 0;
 
-        if ($valorBruto <= 0) continue;
+        if ($valorBruto <= 0) {
+            $itemsIgnorados++;
+            $motivosIgnorados['valor_zero']++;
+            continue;
+        }
+        
+        if (empty($nfe)) {
+            $itemsIgnorados++;
+            $motivosIgnorados['sem_nfe']++;
+            continue;
+        }
 
         // Extrai embalagem (ultimo par de parenteses)
         $embalagem = '';
@@ -374,7 +389,13 @@ try {
 
     $pdo->commit();
 
-    echo json_encode(['success' => true, 'batch_id' => $batchId, 'items_processed' => $itemsAdicionados]);
+    echo json_encode([
+        'success' => true, 
+        'batch_id' => $batchId, 
+        'items_processed' => $itemsAdicionados,
+        'items_ignored' => $itemsIgnorados,
+        'ignore_reasons' => $motivosIgnorados
+    ]);
 } catch (Exception $e) {
     if (isset($pdo) && $pdo->inTransaction()) {
         $pdo->rollBack();

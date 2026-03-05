@@ -189,7 +189,18 @@ require_once 'db.php';
                 const result = await response.json();
                 
                 if (result.success) {
-                    loadBatchResults(result.batch_id);
+                    if (result.items_processed === 0) {
+                        loadingOverlay.style.display = 'none';
+                        let reasonMsg = `Nenhum item válido para comissão foi encontrado no lote.\n\nMotivos de ignorados (${result.items_ignored}):`;
+                        if (result.ignore_reasons) {
+                             reasonMsg += `\n- CFOP Não Permitido (Precisa exp 5xxx/6xxx/7xxx): ${result.ignore_reasons.cfop}`;
+                             reasonMsg += `\n- Valor zerado ou inválido: ${result.ignore_reasons.valor_zero}`;
+                             reasonMsg += `\n- Sem NFe preenchida: ${result.ignore_reasons.sem_nfe}`;
+                        }
+                        alert(reasonMsg);
+                    } else {
+                        loadBatchResults(result.batch_id);
+                    }
                 } else {
                     loadingOverlay.style.display = 'none';
                     alert("Erro ao processar: " + result.message);
