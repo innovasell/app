@@ -1,24 +1,34 @@
 <?php
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
 require_once __DIR__ . '/../sistema-cotacoes/conexao.php';
 
 // Busca os lotes recentes com total de vendas e comissões e total de itens
-$stmt = $pdo->query("
-    SELECT 
-        b.id, 
-        b.periodo, 
-        b.data_upload, 
-        COUNT(i.id) as total_itens,
-        COALESCE(SUM(i.venda_net), 0) as total_venda_net,
-        COALESCE(SUM(i.valor_comissao), 0) as total_comissoes,
-        COALESCE(SUM(i.flag_aprovacao), 0) as itens_aprovacao,
-        COALESCE(SUM(i.flag_teto), 0) as itens_teto
-    FROM com_commission_batches b
-    LEFT JOIN com_commission_items i ON b.id = i.batch_id
-    GROUP BY b.id
-    ORDER BY b.id DESC
-    LIMIT 20
-");
-$lotes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+try {
+    $stmt = $pdo->query("
+        SELECT 
+            b.id, 
+            b.periodo, 
+            b.data_upload, 
+            COUNT(i.id) as total_itens,
+            COALESCE(SUM(i.venda_net), 0) as total_venda_net,
+            COALESCE(SUM(i.valor_comissao), 0) as total_comissoes,
+            COALESCE(SUM(i.flag_aprovacao), 0) as itens_aprovacao,
+            COALESCE(SUM(i.flag_teto), 0) as itens_teto
+        FROM com_commission_batches b
+        LEFT JOIN com_commission_items i ON b.id = i.batch_id
+        GROUP BY b.id
+        ORDER BY b.id DESC
+        LIMIT 20
+    ");
+    $lotes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (PDOException $e) {
+    die("Erro no banco de dados: " . $e->getMessage());
+} catch (Exception $e) {
+    die("Erro geral: " . $e->getMessage());
+}
 ?>
 <!DOCTYPE html>
 <html lang="pt-br">
