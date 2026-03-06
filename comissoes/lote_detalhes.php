@@ -68,6 +68,9 @@ require_once __DIR__ . '/header.php';
                         <?php endforeach; ?>
                     </select>
                     <button class="btn btn-sm btn-outline-primary" onclick="aplicarFiltros()"><i class="bi bi-funnel"></i> Aplicar</button>
+                    <button class="btn btn-sm btn-outline-warning ms-2" onclick="diagnoseSemLista()" title="Analisar por que produtos S/Lista não foram encontrados na price list">
+                        <i class="fas fa-microscope"></i> Diagnóstico S/Lista
+                    </button>
                 </div>
             </div>
         </div>
@@ -101,6 +104,18 @@ require_once __DIR__ . '/header.php';
                 </div>
             </div>
         </div>
+
+        <!-- ▶ PAINEL DE DIAGNÓSTICO S/LISTA ◀ -->
+        <div class="card shadow-sm mt-3 no-print border-warning" id="painelDiagnostico" style="display:none;">
+            <div class="card-header bg-warning bg-opacity-10 d-flex justify-content-between align-items-center py-2">
+                <span class="fw-bold text-warning"><i class="fas fa-microscope me-1"></i> Diagnóstico — Produtos S/ Lista</span>
+                <button class="btn btn-sm btn-outline-secondary" onclick="document.getElementById('painelDiagnostico').style.display='none'">✕ Fechar</button>
+            </div>
+            <div class="card-body p-3" id="diagBody">
+                <div class="text-center py-3"><div class="spinner-border text-warning"></div></div>
+            </div>
+        </div>
+
     </div>
 
     <!-- Modal de Edição -->
@@ -458,6 +473,74 @@ require_once __DIR__ . '/header.php';
 
         doc.save(`comissao_lote_${BATCH_ID}.pdf`);
     }
+    // === DIAGNÓSTICO S/LISTA ===
+    async function diagnoseSemLista() {
+        const painel = document.getElementById('painelDiagnostico');
+        const body   = document.getElementById('diagBody');
+        painel.style.display = '';
+        body.innerHTML = '<div class="text-center py-3"><div class="spinner-border text-warning"></div><p class="mt-2 text-muted">Analisando produtos S/ Lista...</p></div>';
+        painel.scrollIntoView({behavior:'smooth', block:'start'});
+
+        try {
+            const res  = await fetch(`api/debug_sem_lista.php?batch_id=${BATCH_ID}&limit=200`);
+            const data = await res.json();
+            if (!data.success) { body.innerHTML = `<div class="alert alert-danger">${data.message}</div>`; return; }
+
+            const t = data.totais;
+            // Separa por grupo de problema
+            const semCodigo  = data.itens.filter(i => i.opcoes_price_list.length === 0);
+            const codExiste  = data.itens.filter(i => i.opcoes_price_list.length > 0 && i.match.length === 0);
+            const jaAcharia  = data.itens.filter(i => i.encontraria_agora);
+
+            const fmtGrupo = (titulo, cor, icone, itens, extra='') => {
+                if (!itens.length) return '';
+                const rows = itens.map(i => {
+                    const disponiveis = i.opcoes_price_list.map(o => `<code>${o.embalagem}</code>`).join(', ') || '—';
+                    const tentados   = i.candidatos_tentados.slice(0,5).map(c => `<code>${c}</code>`).join(', ');
+                    return `<tr>
+                        <td><b>${i.codigo}</b></td>
+                        <td><code>${i.emb_limpa}</code></td>
+                        <td>${tentados}</td>
+                        <td>${disponiveis}</td>
+                        <td class="text-muted small">${(i.nfe||'')}</td>
+                    </tr>`;
+                }).join('');
+                return `<div class="mb-4">
+                    <h6 class="text-${cor}"><i class="${icone} me-1"></i>${titulo} (${itens.length})</h6>
+                    ${extra}
+                    <div class="table-responsive"><table class="table table-sm table-bordered" style="font-size:0.8rem">
+                        <thead class="table-secondary"><tr>
+                            <th>Código</th><th>Emb. extraída</th><th>Candidatos tentados</th><th>Disponível na Price List</th><th>NF</th>
+                        </tr></thead>
+                        <tbody>${rows}</tbody>
+                    </table></div></div>`;
+            };
+
+            let html = `<div class="row mb-3">
+                <div class="col"><div class="alert alert-secondary py-2 mb-0">
+                    <b>Total S/ Lista:</b> ${t.total_sem_lista} &nbsp;|
+                    <span class="text-danger"><b>Código inexistente na PL:</b> ${t.sem_codigo_na_lista}</span> &nbsp;|
+                    <span class="text-warning"><b>Cód. existe, Emb. diferente:</b> ${t.cod_existe_emb_diff}</span> &nbsp;|
+                    <span class="text-success"><b>Seria encontrado agora:</b> ${t.encontraria_agora}</span>
+                </div></div></div>`;
+
+            if (jaAcharia.length) {
+                html += fmtGrupo('✅ Seriam encontrados com o algoritmo atual (reprocessar)', 'success', 'fas fa-check-circle', jaAcharia,
+                    '<div class="alert alert-success py-1 small">Estes itens seriam resolvidos ao reprocessar a planilha com o algoritmo atual.</div>');
+            }
+            html += fmtGrupo('⚠️ Código existe na Price List mas embalagem diverge', 'warning', 'fas fa-exclamation-triangle',
+                codExiste.filter(i => !i.encontraria_agora),
+                '<div class="alert alert-warning py-1 small">O código existe na price list mas a embalagem extraída do CSV não bate com nenhuma cadastrada. Verifique os formatos e atualize o cadastro se necessário.</div>');
+            html += fmtGrupo('❌ Código não encontrado na Price List', 'danger', 'fas fa-times-circle',
+                semCodigo,
+                '<div class="alert alert-danger py-1 small">O código não existe na price list. Importe/cadastre o produto antes de reprocessar.</div>');
+
+            body.innerHTML = html || '<div class="alert alert-success">Nenhum problema de embalagem identificado!</div>';
+        } catch(e) {
+            body.innerHTML = `<div class="alert alert-danger">Erro ao carregar diagnóstico: ${e.message}</div>`;
+        }
+    }
+
     </script>
 </body>
 </html>
