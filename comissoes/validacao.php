@@ -38,7 +38,9 @@ require_once __DIR__ . '/../sistema-cotacoes/conexao.php';
             <a class="navbar-brand" href="#"><i class="bi bi-percent"></i> Sistema de Comissões</a>
             <div class="collapse navbar-collapse">
                 <ul class="navbar-nav">
+                    <li class="nav-item"><a class="nav-link" href="index.php">Dashboard</a></li>
                     <li class="nav-item"><a class="nav-link" href="upload.php">Upload NFs</a></li>
+                    <li class="nav-item"><a class="nav-link" href="comissoes.php">Cálculo de Comissões</a></li>
                     <li class="nav-item"><a class="nav-link active" href="validacao.php">Validação</a></li>
                     <li class="nav-item"><a class="nav-link" href="config_cfop.php">Configurar CFOPs</a></li>
                 </ul>
