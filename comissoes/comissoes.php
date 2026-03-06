@@ -96,6 +96,14 @@ require_once 'db.php';
                                     <div class="form-text">Exerça o modelo de Pedidos/Vendas com a coluna `Vencimento(s)` ou `PM (dias)`.</div>
                                 </div>
                             </div>
+                            <div class="row">
+                                <div class="col-md-8 mb-3">
+                                    <label class="form-label fw-bold text-secondary">Nome / Descrição do Lote <span class="text-danger">*</span></label>
+                                    <input class="form-control" type="text" name="nome_lote" id="nomeLote" 
+                                           placeholder="Ex: Comissões Janeiro 2026 - Andrea" required>
+                                    <div class="form-text">Nome que identificará este lote no histórico.</div>
+                                </div>
+                            </div>
                             <div class="d-grid mt-2">
                                 <button type="submit" class="btn btn-primary btn-lg">
                                     <i class="bi bi-gear-fill"></i> Processar Planilhas e Calcular

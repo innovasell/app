@@ -1,5 +1,5 @@
 <?php
-require_once 'db.php';
+require_once __DIR__ . '/../sistema-cotacoes/conexao.php';
 
 $message = '';
 
@@ -46,7 +46,9 @@ $rules = $pdo->query("SELECT * FROM com_cfop_rules ORDER BY cfop ASC")->fetchAll
             <a class="navbar-brand" href="#"><i class="bi bi-percent"></i> Sistema de Comissões</a>
             <div class="collapse navbar-collapse">
                 <ul class="navbar-nav">
+                    <li class="nav-item"><a class="nav-link" href="index.php">Dashboard (Lotes)</a></li>
                     <li class="nav-item"><a class="nav-link" href="upload.php">Upload NFs</a></li>
+                    <li class="nav-item"><a class="nav-link" href="comissoes.php">Cálculo de Comissões</a></li>
                     <li class="nav-item"><a class="nav-link" href="validacao.php">Validação</a></li>
                     <li class="nav-item"><a class="nav-link active" href="config_cfop.php">Configurar CFOPs</a></li>
                 </ul>

@@ -1,5 +1,5 @@
 <?php
-require_once 'db.php';
+require_once __DIR__ . '/../sistema-cotacoes/conexao.php';
 ?>
 <!DOCTYPE html>
 <html lang="pt-br">
@@ -236,7 +236,7 @@ require_once 'db.php';
 
         async function loadBatches() {
             try {
-                const response = await fetch('api/get_batches.php');
+                const response = await fetch('api/get_commission_batches.php');
                 const result = await response.json();
 
                 if (result.success) {
@@ -249,18 +249,19 @@ require_once 'db.php';
                     result.data.forEach(batch => {
                         const tr = document.createElement('tr');
                         tr.innerHTML = `
-                            <td>${batch.batch_id}</td>
+                            <td><strong>#${batch.batch_id}</strong><br><small class="text-muted">${batch.nome || ''}</small></td>
                             <td>${batch.formatted_date}</td>
                             <td><span class="badge bg-secondary">${batch.item_count}</span></td>
                             <td><span class="badge ${batch.pending_count > 0 ? 'bg-warning text-dark' : 'bg-success'}">${batch.pending_count}</span></td>
-                             <td><span class="badge ${batch.missing_sellers > 0 ? 'bg-danger' : 'bg-success'}">${batch.missing_sellers}</span></td>
+                            <td><span class="badge ${batch.missing_sellers > 0 ? 'bg-danger' : 'bg-success'}">${batch.missing_sellers}</span></td>
                             <td>
-                                <button class="btn btn-sm btn-primary" onclick="openBatch('${batch.batch_id}')">
+                                <a href="comissoes.php?view_batch=${batch.batch_id}" class="btn btn-sm btn-primary">
                                     Abrir <i class="bi bi-folder2-open"></i>
-                                </button>
+                                </a>
                             </td>
                         `;
                         batchListBody.appendChild(tr);
+                    });
                     });
                 }
             } catch (e) {

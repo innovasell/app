@@ -8,12 +8,39 @@ try {
     $pdo->exec("CREATE TABLE IF NOT EXISTS com_commission_batches (
         id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
         created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        nome        VARCHAR(150) NULL COMMENT 'Nome descritivo do lote',
         periodo     VARCHAR(20) NULL COMMENT 'Ex: 2026-01',
         total_items INT DEFAULT 0,
         total_nfs   INT DEFAULT 0,
         obs         TEXT NULL
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
+    // Adiciona coluna nome se ainda nao existir (migracao)
+    try { $pdo->exec("ALTER TABLE com_commission_batches ADD COLUMN nome VARCHAR(150) NULL AFTER created_at"); } catch(Exception $ex) {}  
     echo "Tabela 'com_commission_batches' OK.<br>";
+
+    // ── CFOPs Configurados ────────────────────────────────────────────────────
+    $pdo->exec("CREATE TABLE IF NOT EXISTS com_cfop_rules (
+        id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        cfop        VARCHAR(10) NOT NULL UNIQUE,
+        description VARCHAR(200) NULL,
+        is_active   TINYINT(1) DEFAULT 1,
+        created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
+    // Insere CFOPs padrao apenas se a tabela estiver vazia
+    $cnt = $pdo->query("SELECT COUNT(*) FROM com_cfop_rules")->fetchColumn();
+    if ($cnt == 0) {
+        $pdo->exec("INSERT INTO com_cfop_rules (cfop, description) VALUES
+            ('5102', 'Venda de mercadoria adquirida ou recebida de terceiros'),
+            ('5123', 'Venda de mercadoria adquirida ou recebida de terceiros - Simples Nacional'),
+            ('6102', 'Venda de mercadoria adquirida - Operação Interestadual'),
+            ('6123', 'Venda de mercadoria adquirida - Interestadual Simples Nacional'),
+            ('6106', 'Venda de produto industrializado - Interestadual'),
+            ('6110', 'Venda de mercadoria sujeita ao regime de substituição tributária - Interestadual'),
+            ('5106', 'Venda de produto industrializado - Intraestadual'),
+            ('5119', 'Venda de mercadoria sujeita ao regime de substituição tributária - Intraestadual')
+        ");
+    }
+    echo "Tabela 'com_cfop_rules' OK.<br>";
 
     // ── 2. Itens calculados ───────────────────────────────────────────────────
     $pdo->exec("CREATE TABLE IF NOT EXISTS com_commission_items (

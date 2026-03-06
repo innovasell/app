@@ -66,9 +66,10 @@ try {
 
     $pdo->beginTransaction();
 
-    // 1. Cria Lote
-    $stmtBatch = $pdo->prepare("INSERT INTO com_commission_batches (periodo) VALUES (:periodo)");
-    $stmtBatch->execute([':periodo' => date('Y-m')]);
+    // 1. Cria Lote com nome personalizado
+    $nomeLote = isset($_POST['nome_lote']) ? trim($_POST['nome_lote']) : ('Lote ' . date('d/m/Y H:i'));
+    $stmtBatch = $pdo->prepare("INSERT INTO com_commission_batches (periodo, nome) VALUES (:periodo, :nome)");
+    $stmtBatch->execute([':periodo' => date('Y-m'), ':nome' => $nomeLote]);
     $batchId = $pdo->lastInsertId();
 
     // Helper: Normalize Headers
@@ -238,8 +239,20 @@ try {
         $tipo = isset($row[$idxMovTipo]) ? mb_strtolower(trim($row[$idxMovTipo]), 'UTF-8') : '';
         $cfop = isset($row[$idxMovCfop]) ? trim($row[$idxMovCfop]) : '';
 
-        // Filtra apenas saídas tributáveis exatas definidas pelo usuário
-        $cfopsValidos = ['5102', '5123', '6102', '6123', '6106', '6110', '5106', '5119'];
+        // Filtra apenas saídas tributáveis: lê do banco com_cfop_rules ou usa fallback
+        static $cfopsValidos = null;
+        if ($cfopsValidos === null) {
+            try {
+                $r = $pdo->query("SELECT cfop FROM com_cfop_rules WHERE is_active = 1");
+                $cfopsValidos = $r->fetchAll(PDO::FETCH_COLUMN);
+            } catch (Exception $ex) {
+                $cfopsValidos = [];
+            }
+            if (empty($cfopsValidos)) {
+                // Fallback se a tabela estiver vazia/indisponível
+                $cfopsValidos = ['5102', '5123', '6102', '6123', '6106', '6110', '5106', '5119'];
+            }
+        }
         if (!in_array($cfop, $cfopsValidos)) {
             $itemsIgnorados++;
             $motivosIgnorados['cfop']++;
