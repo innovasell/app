@@ -232,8 +232,8 @@ $paginaTitulo = [
             <!-- Lado direito: link de volta ao sistema principal -->
             <ul class="navbar-nav ms-auto align-items-center">
                 <li class="nav-item">
-                    <a class="nav-link text-muted" href="../sistema-cotacoes/bi.php" title="Voltar ao Sistema de Cotações">
-                        <i class="fas fa-arrow-left me-1"></i> Cotações
+                    <a class="nav-link text-muted" href="../" title="Voltar ao início">
+                        <i class="fas fa-home me-1"></i> Início
                     </a>
                 </li>
             </ul>
