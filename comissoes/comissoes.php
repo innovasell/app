@@ -61,8 +61,10 @@ require_once 'db.php';
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav">
-                    <li class="nav-item"><a class="nav-link" href="upload.php">Upload XML</a></li>
-                    <li class="nav-item"><a class="nav-link" href="validacao.php">Validação XML</a></li>
+                    <li class="nav-item"><a class="nav-link" href="index.php">Dashboard (Lotes)</a></li>
+                    <li class="nav-item"><a class="nav-link" href="upload.php">Upload NFs</a></li>
+                    <li class="nav-item"><a class="nav-link" href="validacao.php">Validação</a></li>
+                    <li class="nav-item"><a class="nav-link" href="config_cfop.php">Configurar CFOPs</a></li>
                     <li class="nav-item"><a class="nav-link active" href="comissoes.php">Cálculo de Comissões (Planilhas)</a></li>
                 </ul>
             </div>
@@ -168,10 +170,20 @@ require_once 'db.php';
         const uploadForm = document.getElementById('uploadForm');
         const loadingOverlay = document.getElementById('loadingOverlay');
         const resultsArea = document.getElementById('resultsArea');
+        const uploadSection = document.getElementById('uploadSection');
         const spanBatchId = document.getElementById('spanBatchId');
         const btnExportCsv = document.getElementById('btnExportCsv');
         
         let dataTable = null;
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const viewBatch = urlParams.get('view_batch');
+
+        if (viewBatch) {
+            uploadSection.style.display = 'none';
+            resultsArea.classList.remove('d-none');
+            loadBatchResults(viewBatch);
+        }
 
         uploadForm.addEventListener('submit', async (e) => {
             e.preventDefault();

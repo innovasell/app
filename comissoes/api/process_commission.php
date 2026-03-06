@@ -402,7 +402,7 @@ try {
         }
 
         $stmtInsert->execute([
-            $batchId, $nfe, $data_nf, $cfop, $codigo, $descricaoLimpa, $embalagem, $fabricante, $representante, $cliente,
+            $batchId, $nfe, $data_nf, $cfop, $codigo9, $descricaoLimpa, $embalagem, $fabricante, $representante, $cliente,
             $qtde, $valorBruto, $icms, $pis, $cofins, $venda_net, cloneDecimal($preco_net_un), cloneDecimal($preco_lista_brl), cloneDecimal($desconto_brl),
             cloneDecimal($desconto_pct), cloneDecimal($comissao_base_pct), cloneDecimal($pm_dias), cloneDecimal($pm_semanas), 
             cloneDecimal($ajuste_prazo_pct), cloneDecimal($comissao_final_pct), cloneDecimal($valor_comissao), 
