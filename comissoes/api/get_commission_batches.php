@@ -7,10 +7,21 @@ error_reporting(0);
 require_once __DIR__ . '/../../sistema-cotacoes/conexao.php';
 
 try {
+    // Verifica se a coluna 'nome' existe (compatibilidade antes do setup ser rodado)
+    $hasNome = false;
+    try {
+        $pdo->query("SELECT nome FROM com_commission_batches LIMIT 1");
+        $hasNome = true;
+    } catch (Exception $ex) {
+        $hasNome = false;
+    }
+
+    $nomeCol = $hasNome ? "b.nome," : "NULL as nome,";
+
     $stmt = $pdo->query("
         SELECT 
-            b.id, 
-            b.nome,
+            b.id,
+            $nomeCol
             b.periodo,
             b.created_at,
             COUNT(i.id) as item_count,
@@ -28,7 +39,7 @@ try {
     foreach ($batches as &$b) {
         $b['formatted_date'] = date('d/m/Y H:i', strtotime($b['created_at']));
         $b['batch_id'] = $b['id'];
-        $b['pending_count'] = $b['sem_lista']; // itens sem lista como pendentes
+        $b['pending_count'] = (int)$b['sem_lista'];
         $b['missing_sellers'] = 0;
     }
 
@@ -36,5 +47,5 @@ try {
     echo json_encode(['success' => true, 'data' => $batches]);
 } catch (Exception $e) {
     ob_end_clean();
-    echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+    echo json_encode(['success' => false, 'error' => $e->getMessage(), 'data' => []]);
 }
