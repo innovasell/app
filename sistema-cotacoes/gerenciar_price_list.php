@@ -254,17 +254,24 @@ function renderTabela(data) {
             <td class="text-end fw-bold">$ ${fmtUSD(item.preco_net_usd)}</td>
             <td class="text-muted small">${item.lead_time||'—'}</td>
             <td class="text-center">
-                <button class="btn btn-sm btn-outline-warning" onclick="abrirEdicao('${item.id}')" title="Editar">
+                <button class="btn btn-sm btn-outline-warning btn-editar" data-id="${item.id}" title="Editar">
                     <i class="fas fa-pencil-alt"></i>
                 </button>
             </td>`;
         tbody.appendChild(tr);
     });
+    
     dtTable = $('#tblPriceList').DataTable({
         language: { url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/pt-BR.json' },
         order: [[1,'asc']],
         pageLength: 50,
         columnDefs: [{ targets: [-1], orderable: false }]
+    });
+
+    // Delegate bind para funcionar independente da paginação
+    $('#tblPriceList tbody').off('click', '.btn-editar').on('click', '.btn-editar', function() {
+        const id = $(this).attr('data-id');
+        abrirEdicao(id);
     });
 }
 
