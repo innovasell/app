@@ -1,5 +1,5 @@
 <?php
-require_once 'db.php';
+require_once __DIR__ . '/../sistema-cotacoes/conexao.php';
 
 // Busca os lotes recentes com total de vendas e comissões e total de itens
 $stmt = $pdo->query("
