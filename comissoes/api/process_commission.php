@@ -304,6 +304,10 @@ try {
         // (A cot_price_list costuma ter o codigo LIKE :cod e a embalagem EXATA)
         $preco_lista_usd = 0;
         $preco_lista_brl = 0;
+        $ptax_usado = 0;
+        $desconto_brl = 0;
+        $desconto_pct = 0;
+        $comissao_base_pct = 0;
         $lista_nao_encontrada = 1;
         
         $codigo9 = substr(trim($codigo), 0, 9);
