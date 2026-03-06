@@ -12,16 +12,20 @@ if (!isset($_SESSION['representante_email'])) {
 require_once __DIR__ . '/../conexao.php';
 
 try {
+    // Garante que a coluna id exista como Primary Key Auto Increment (essencial para o CRUD)
+    try {
+        $pdo->exec("ALTER TABLE cot_price_list ADD COLUMN id INT AUTO_INCREMENT PRIMARY KEY FIRST");
+    } catch (PDOException $e) {
+        // Ignora se a coluna já existir
+    }
+
     // Garante que a coluna lead_time exista (para compatibilidade com instalações antigas)
     try {
         $pdo->exec("ALTER TABLE cot_price_list ADD COLUMN IF NOT EXISTS lead_time VARCHAR(100) DEFAULT ''");
     } catch (PDOException $e) {
-        // Ignora erro caso a sintaxe ADD COLUMN IF NOT EXISTS não seja suportada na versão antiga do MariaDB/MySQL
         try {
             $pdo->exec("ALTER TABLE cot_price_list ADD COLUMN lead_time VARCHAR(100) DEFAULT ''");
-        } catch (PDOException $e2) {
-            // Se já existe, vai dar erro, então apenas ignoramos
-        }
+        } catch (PDOException $e2) {}
     }
 
     $method = $_SERVER['REQUEST_METHOD'];
