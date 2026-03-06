@@ -8,10 +8,10 @@ $stmt = $pdo->query("
         b.periodo, 
         b.data_upload, 
         COUNT(i.id) as total_itens,
-        SUM(i.venda_net) as total_venda_net,
-        SUM(i.valor_comissao) as total_comissoes,
-        SUM(i.flag_aprovacao) as itens_aprovacao,
-        SUM(i.flag_teto) as itens_teto
+        COALESCE(SUM(i.venda_net), 0) as total_venda_net,
+        COALESCE(SUM(i.valor_comissao), 0) as total_comissoes,
+        COALESCE(SUM(i.flag_aprovacao), 0) as itens_aprovacao,
+        COALESCE(SUM(i.flag_teto), 0) as itens_teto
     FROM com_commission_batches b
     LEFT JOIN com_commission_items i ON b.id = i.batch_id
     GROUP BY b.id
