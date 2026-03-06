@@ -284,8 +284,6 @@ try {
         } elseif (preg_match('/(\d{4})[\/\-](\d{2})[\/\-](\d{2})/', $data_mov_raw, $m)) {
             $data_nf_mov = "{$m[1]}-{$m[2]}-{$m[3]}";
         }
-        
-        file_put_contents(__DIR__ . '/debug_csv.log', "Data lida MOV: '$data_mov_raw' -> Parse: '$data_nf_mov'\n", FILE_APPEND);
         $rep_mov = ($idxMovRep !== -1 && isset($row[$idxMovRep])) ? trim($row[$idxMovRep]) : '';
         $cliente_mov = ($idxMovCliente !== -1 && isset($row[$idxMovCliente])) ? trim($row[$idxMovCliente]) : '';
 
@@ -314,8 +312,6 @@ try {
         $stmtPrice = $pdo->prepare("SELECT preco_net_usd FROM cot_price_list WHERE codigo LIKE ? AND (embalagem = ? OR embalagem = ?) ORDER BY id DESC LIMIT 1");
         $stmtPrice->execute(["{$codigo9}%", $embalagemLimpaPriceList, $embalagem]);
         $priceRow = $stmtPrice->fetch(PDO::FETCH_ASSOC);
-        
-        file_put_contents(__DIR__ . '/debug_csv.log', "Busca Cotacao: codigo '{$codigo9}%', embLimpa '{$embalagemLimpaPriceList}', embPar '{$embalagem}' -> Achou: " . json_encode($priceRow) . "\n", FILE_APPEND);
 
         if ($priceRow && $priceRow['preco_net_usd'] > 0) {
             $preco_lista_usd = (float)$priceRow['preco_net_usd'];
