@@ -35,9 +35,9 @@ try {
         FROM com_commission_items
         WHERE batch_id = ? AND lista_nao_encontrada = 1
         ORDER BY codigo
-        LIMIT ?
+        LIMIT {$limit}
     ");
-    $stmt->execute([$batch_id, $limit]);
+    $stmt->execute([$batch_id]);
     $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     $result = [];
