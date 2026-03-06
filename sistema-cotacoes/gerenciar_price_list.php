@@ -237,42 +237,45 @@ async function carregarDados() {
 
 // ── Renderiza tabela ───────────────────────────────────────
 function renderTabela(data) {
-    if (dtTable) { dtTable.destroy(); dtTable = null; }
     const fmtUSD = v => parseFloat(v||0).toLocaleString('en-US', {minimumFractionDigits:4});
-    const tbody = document.getElementById('tbodyPL');
-    tbody.innerHTML = '';
-    data.forEach((item, i) => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td class="text-muted small">${item.id}</td>
-            <td><b>${item.codigo||'—'}</b></td>
-            <td style="max-width:280px;" title="${item.produto||''}">${(item.produto||'').substring(0,60)}</td>
-            <td>${item.fabricante||'—'}</td>
-            <td><span class="badge bg-light text-dark border">${item.classificacao||'—'}</span></td>
-            <td><code>${item.embalagem||'—'}</code></td>
-            <td><span class="badge ${item.fracionado==='Sim'?'bg-success':'bg-secondary'}">${item.fracionado||'—'}</span></td>
-            <td class="text-end fw-bold">$ ${fmtUSD(item.preco_net_usd)}</td>
-            <td class="text-muted small">${item.lead_time||'—'}</td>
-            <td class="text-center">
-                <button class="btn btn-sm btn-outline-warning btn-editar" data-id="${item.id}" title="Editar">
-                    <i class="fas fa-pencil-alt"></i>
-                </button>
-            </td>`;
-        tbody.appendChild(tr);
-    });
-    
-    dtTable = $('#tblPriceList').DataTable({
-        language: { url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/pt-BR.json' },
-        order: [[1,'asc']],
-        pageLength: 50,
-        columnDefs: [{ targets: [-1], orderable: false }]
-    });
 
-    // Delegate bind para funcionar independente da paginação
-    $('#tblPriceList tbody').off('click', '.btn-editar').on('click', '.btn-editar', function() {
-        const id = $(this).attr('data-id');
-        abrirEdicao(id);
-    });
+    if (!dtTable) {
+        dtTable = $('#tblPriceList').DataTable({
+            language: { url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/pt-BR.json' },
+            order: [[1,'asc']],
+            pageLength: 50,
+            data: data,
+            columns: [
+                { data: 'id', class: 'text-muted small' },
+                { data: 'codigo', render: v => `<b>${v||'—'}</b>` },
+                { data: 'produto', render: v => `<span style="max-width:280px;display:inline-block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${v||''}">${(v||'').substring(0,60)}</span>` },
+                { data: 'fabricante', render: v => v||'—' },
+                { data: 'classificacao', render: v => `<span class="badge bg-light text-dark border">${v||'—'}</span>` },
+                { data: 'embalagem', render: v => `<code>${v||'—'}</code>` },
+                { data: 'fracionado', render: v => `<span class="badge ${v==='Sim'?'bg-success':'bg-secondary'}">${v||'—'}</span>` },
+                { data: 'preco_net_usd', class: 'text-end fw-bold', render: v => `$ ${fmtUSD(v)}` },
+                { data: 'lead_time', class: 'text-muted small', render: v => v||'—' },
+                { 
+                    data: null, 
+                    class: 'text-center',
+                    orderable: false,
+                    render: function(data, type, row) {
+                        return `<button class="btn btn-sm btn-outline-warning btn-editar" data-id="${row.id}" title="Editar"><i class="fas fa-pencil-alt"></i></button>`;
+                    }
+                }
+            ]
+        });
+
+        // Delegate bind para funcionar independente da paginação
+        $('#tblPriceList tbody').on('click', '.btn-editar', function() {
+            const id = $(this).attr('data-id');
+            abrirEdicao(id);
+        });
+    } else {
+        dtTable.clear();
+        dtTable.rows.add(data);
+        dtTable.draw(false);
+    }
 }
 
 // ── Filtros externos (fabricante, fracionado, busca) ───────
