@@ -244,7 +244,7 @@ require_once __DIR__ . '/../sistema-cotacoes/conexao.php';
                 if (result.success) {
                     batchListBody.innerHTML = '';
                     if (result.data.length === 0) {
-                        batchListBody.innerHTML = '<tr><td colspan="6" class="text-center">Nenhum lote encontrado.</td></tr>';
+                        batchListBody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-3">Nenhum lote calculado ainda. <a href="comissoes.php">Criar novo lote</a></td></tr>';
                         return;
                     }
 
@@ -264,10 +264,12 @@ require_once __DIR__ . '/../sistema-cotacoes/conexao.php';
                         `;
                         batchListBody.appendChild(tr);
                     });
-                    });
+                } else {
+                    batchListBody.innerHTML = `<tr><td colspan="6" class="text-center text-danger py-3">Erro ao carregar lotes: ${result.error || 'desconhecido'}</td></tr>`;
                 }
             } catch (e) {
                 console.error(e);
+                batchListBody.innerHTML = `<tr><td colspan="6" class="text-center text-danger py-3">Erro de comunicação: ${e.message}</td></tr>`;
             }
         }
 
