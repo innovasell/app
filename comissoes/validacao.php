@@ -257,7 +257,7 @@ require_once __DIR__ . '/../sistema-cotacoes/conexao.php';
                             <td><span class="badge ${batch.pending_count > 0 ? 'bg-warning text-dark' : 'bg-success'}">${batch.pending_count}</span></td>
                             <td><span class="badge ${batch.missing_sellers > 0 ? 'bg-danger' : 'bg-success'}">${batch.missing_sellers}</span></td>
                             <td>
-                                <a href="comissoes.php?view_batch=${batch.batch_id}" class="btn btn-sm btn-primary">
+                                <a href="lote_detalhes.php?batch_id=${batch.batch_id}" class="btn btn-sm btn-primary">
                                     Abrir <i class="bi bi-folder2-open"></i>
                                 </a>
                             </td>
