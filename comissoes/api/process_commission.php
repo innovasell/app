@@ -309,7 +309,19 @@ try {
                     number_format($numFloat, 2, '.', '') . ($unidade ? ' '.$unidade : ''),
                     trim(rtrim(number_format($numFloat, 3, '.', ''), '0'), '.') . ($unidade ? ' '.$unidade : ''),
                 ];
-                $embCandidatos = array_unique(array_merge($embCandidatos, $alternativas));
+                // Conversão GR/G/GRAMAS → KG (price list usa KG como padrão)
+                $unidadeUp = strtoupper($unidade);
+                if (in_array($unidadeUp, ['G', 'GR', 'GRS', 'GRAMAS', 'GRAMA'])) {
+                    $numKg = $numFloat / 1000;
+                    $alternativas = array_merge($alternativas, [
+                        number_format($numKg, 3, '.', '') . ' KG',
+                        number_format($numKg, 4, '.', '') . ' KG',
+                        // remove trailing zeros: 0.400 e 0.4
+                        rtrim(rtrim(number_format($numKg, 4, '.', ''), '0'), '.') . ' KG',
+                        rtrim(rtrim(number_format($numKg, 3, '.', ''), '0'), '.') . ' KG',
+                    ]);
+                }
+                $embCandidatos = array_values(array_unique(array_merge($embCandidatos, $alternativas)));
             }
             $embalagem = "($embalagem)"; // mantém para exibição
         } else {

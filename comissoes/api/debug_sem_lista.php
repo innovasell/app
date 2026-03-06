@@ -58,13 +58,25 @@ try {
             $unidade  = trim($m[2]);
             $numNorm  = str_replace(',', '.', $numRaw);
             $numFloat = (float)$numNorm;
-            $candidatos = array_values(array_unique(array_merge($candidatos, [
+            $candidatos = array_merge($candidatos, [
                 $numNorm . ($unidade ? ' '.$unidade : ''),
                 number_format($numFloat, 3, '.', '') . ($unidade ? ' '.$unidade : ''),
                 number_format($numFloat, 0, '.', '') . ($unidade ? ' '.$unidade : ''),
                 number_format($numFloat, 2, '.', '') . ($unidade ? ' '.$unidade : ''),
-                trim(rtrim(number_format($numFloat, 3, '.', ''), '0'), '.') . ($unidade ? ' '.$unidade : ''),
-            ])));
+                rtrim(rtrim(number_format($numFloat, 3, '.', ''), '0'), '.') . ($unidade ? ' '.$unidade : ''),
+            ]);
+            // Conversão GR/G/GRAMAS → KG (price list usa KG como padrão)
+            $unidadeUp = strtoupper($unidade);
+            if (in_array($unidadeUp, ['G', 'GR', 'GRS', 'GRAMAS', 'GRAMA'])) {
+                $numKg = $numFloat / 1000;
+                $candidatos = array_merge($candidatos, [
+                    number_format($numKg, 3, '.', '') . ' KG',
+                    number_format($numKg, 4, '.', '') . ' KG',
+                    rtrim(rtrim(number_format($numKg, 4, '.', ''), '0'), '.') . ' KG',
+                    rtrim(rtrim(number_format($numKg, 3, '.', ''), '0'), '.') . ' KG',
+                ]);
+            }
+            $candidatos = array_values(array_unique($candidatos));
         }
 
         // Busca TODAS as embalagens disponíveis na price list para este código
