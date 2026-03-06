@@ -7,7 +7,6 @@ if (!$batch_id) {
     exit;
 }
 
-// Busca dados do lote
 $stmtBatch = $pdo->prepare("SELECT * FROM com_commission_batches WHERE id = ?");
 $stmtBatch->execute([$batch_id]);
 $batch = $stmtBatch->fetch(PDO::FETCH_ASSOC);
@@ -15,50 +14,20 @@ if (!$batch) {
     die('<div class="alert alert-danger m-5">Lote não encontrado.</div>');
 }
 
-// Busca todos os representantes do lote (para filtro)
 $stmtReps = $pdo->prepare("SELECT DISTINCT representante FROM com_commission_items WHERE batch_id = ? AND representante != '' ORDER BY representante");
 $stmtReps->execute([$batch_id]);
 $representantes = $stmtReps->fetchAll(PDO::FETCH_COLUMN);
+
+$pagina_ativa = 'validacao'; // Ativo em Validação pois é sub-página
+require_once __DIR__ . '/header.php';
 ?>
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lote #<?= $batch_id ?> — <?= htmlspecialchars($batch['nome'] ?? '') ?></title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
-    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
-    <style>
-        body { background-color: #f8f9fa; font-size: 0.875rem; }
-        .badge-aprovacao { background-color: #dc3545; color: #fff; }
-        .badge-teto     { background-color: #ffc107; color: #000; }
-        .badge-sl       { background-color: #6c757d; color: #fff; }
-        .badge-ok       { background-color: #198754; color: #fff; }
-        .filter-bar .btn-check:checked + .btn { font-weight:bold; }
-        @media print {
-            .no-print { display:none!important; }
-            body { font-size: 0.75rem; }
-        }
-    </style>
-</head>
-<body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary no-print">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="index.php"><i class="bi bi-percent"></i> Sistema de Comissões</a>
-            <div class="collapse navbar-collapse">
-                <ul class="navbar-nav">
-                    <li class="nav-item"><a class="nav-link" href="index.php">Dashboard</a></li>
-                    <li class="nav-item"><a class="nav-link" href="upload.php">Upload NFs</a></li>
-                    <li class="nav-item"><a class="nav-link" href="comissoes.php">Cálculo de Comissões</a></li>
-                    <li class="nav-item"><a class="nav-link active" href="validacao.php">Validação</a></li>
-                    <li class="nav-item"><a class="nav-link" href="config_cfop.php">Configurar CFOPs</a></li>
-                </ul>
-            </div>
-        </div>
-    </nav>
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+<style>
+    @media print { .no-print { display:none!important; } body { font-size:0.75rem; } }
+</style>
 
     <div class="container-fluid px-4 py-3">
+
         <!-- Cabeçalho do Lote -->
         <div class="d-flex justify-content-between align-items-center mb-3 no-print">
             <div>

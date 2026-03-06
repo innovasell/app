@@ -1,54 +1,16 @@
 <?php
 require_once __DIR__ . '/../sistema-cotacoes/conexao.php';
+$pagina_ativa = 'validacao';
+require_once __DIR__ . '/header.php';
 ?>
-<!DOCTYPE html>
-<html lang="pt-br">
+<style>
+    .editable { cursor: pointer; border-bottom: 1px dashed #40883c; }
+    .editable:hover { background-color: #f1fff1; }
+    .status-pending { background-color: #fff3cd; }
+</style>
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Validação de Importação</title>
-    <!-- Bootstrap 5 CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
-    <style>
-        .editable {
-            cursor: pointer;
-            border-bottom: 1px dashed #0d6efd;
-        }
+    <div class="container-fluid px-4 py-3">
 
-        .editable:hover {
-            background-color: #f1f8ff;
-        }
-
-        .status-pending {
-            background-color: #fff3cd;
-            /* Amarelo alerta */
-        }
-
-        .status-validated {}
-    </style>
-</head>
-
-<body class="bg-light">
-
-    <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="#"><i class="bi bi-percent"></i> Sistema de Comissões</a>
-            <div class="collapse navbar-collapse">
-                <ul class="navbar-nav">
-                    <li class="nav-item"><a class="nav-link" href="index.php">Dashboard</a></li>
-                    <li class="nav-item"><a class="nav-link" href="upload.php">Upload NFs</a></li>
-                    <li class="nav-item"><a class="nav-link" href="comissoes.php">Cálculo de Comissões</a></li>
-                    <li class="nav-item"><a class="nav-link active" href="validacao.php">Validação</a></li>
-                    <li class="nav-item"><a class="nav-link" href="config_cfop.php">Configurar CFOPs</a></li>
-                </ul>
-            </div>
-        </div>
-    </nav>
-
-    <div class="container-fluid px-4">
 
         <!-- Batch Selector -->
         <div class="card shadow-sm mb-4" id="batchSelectorCard">

@@ -1,79 +1,27 @@
 <?php
-require_once 'db.php';
+require_once __DIR__ . '/../sistema-cotacoes/conexao.php';
+$pagina_ativa = 'upload';
+require_once __DIR__ . '/header.php';
 ?>
-<!DOCTYPE html>
-<html lang="pt-br">
+<style>
+    .upload-area {
+        border: 2px dashed #40883c;
+        border-radius: 12px; padding: 3rem;
+        text-align: center; background: #fff;
+        transition: all 0.3s ease; cursor: pointer;
+    }
+    .upload-area:hover { border-color: #2c5e29; background-color: #f1fff1; }
+    .upload-icon { font-size: 3rem; color: #40883c; margin-bottom: 1rem; }
+    #loadingOverlay {
+        position: fixed; top:0; left:0; width:100%; height:100%;
+        background: rgba(255,255,255,0.92); z-index:9999;
+        display:none; flex-direction:column;
+        align-items:center; justify-content:center;
+    }
+</style>
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Upload de NFs (Comissões)</title>
-    <!-- Bootstrap 5 CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
-    <style>
-        body {
-            background-color: #f8f9fa;
-        }
+    <div class="container-fluid px-4 py-3">
 
-        .upload-area {
-            border: 2px dashed #dee2e6;
-            border-radius: 10px;
-            padding: 3rem;
-            text-align: center;
-            background: #fff;
-            transition: all 0.3s ease;
-            cursor: pointer;
-        }
-
-        .upload-area:hover {
-            border-color: #0d6efd;
-            background-color: #f1f8ff;
-        }
-
-        .upload-icon {
-            font-size: 3rem;
-            color: #6c757d;
-            margin-bottom: 1rem;
-        }
-
-        /* Loading Overlay */
-        #loadingOverlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(255, 255, 255, 0.9);
-            z-index: 9999;
-            display: none;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-        }
-    </style>
-</head>
-
-<body>
-
-    <!-- Navigation -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="#"><i class="bi bi-percent"></i> Sistema de Comissões</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav">
-                    <li class="nav-item"><a class="nav-link" href="index.php">Dashboard</a></li>
-                    <li class="nav-item"><a class="nav-link active" href="upload.php">Upload NFs</a></li>
-                    <li class="nav-item"><a class="nav-link" href="comissoes.php">Cálculo de Comissões</a></li>
-                    <li class="nav-item"><a class="nav-link" href="validacao.php">Validação</a></li>
-                    <li class="nav-item"><a class="nav-link" href="config_cfop.php">Configurar CFOPs</a></li>
-                </ul>
-            </div>
-        </div>
-    </nav>
 
     <div class="container">
         <div class="row justify-content-center">

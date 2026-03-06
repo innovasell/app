@@ -26,56 +26,13 @@ try {
     $lotes = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (PDOException $e) {
     die("Erro no banco de dados: " . $e->getMessage());
-} catch (Exception $e) {
-    die("Erro geral: " . $e->getMessage());
 }
+
+$pagina_ativa = 'dashboard';
+require_once __DIR__ . '/header.php';
 ?>
-<!DOCTYPE html>
-<html lang="pt-br">
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Histórico de Comissões</title>
-    <!-- Bootstrap 5 CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
-    <style>
-        body { background-color: #f8f9fa; }
-        .batch-card {
-            transition: transform 0.2s, box-shadow 0.2s;
-            cursor: pointer;
-            text-decoration: none;
-            color: inherit;
-        }
-        .batch-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 .5rem 1rem rgba(0,0,0,.15)!important;
-        }
-    </style>
-</head>
-
-<body>
-    <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="#"><i class="bi bi-percent"></i> Sistema de Comissões</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav">
-                    <li class="nav-item"><a class="nav-link active" href="index.php">Dashboard</a></li>
-                    <li class="nav-item"><a class="nav-link" href="upload.php">Upload NFs</a></li>
-                    <li class="nav-item"><a class="nav-link" href="comissoes.php">Cálculo de Comissões</a></li>
-                    <li class="nav-item"><a class="nav-link" href="validacao.php">Validação</a></li>
-                    <li class="nav-item"><a class="nav-link" href="config_cfop.php">Configurar CFOPs</a></li>
-                </ul>
-            </div>
-        </div>
-    </nav>
-
-    <div class="container px-4">
+    <div class="container px-4 py-3">
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h3 class="text-primary"><i class="bi bi-collection"></i> Histórico de Comissões (Lotes)</h3>
             <a href="comissoes.php" class="btn btn-success"><i class="bi bi-plus-circle"></i> Novo Lote de Planilhas</a>
