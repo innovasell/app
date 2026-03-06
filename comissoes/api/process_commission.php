@@ -288,12 +288,32 @@ try {
 
         if (preg_match('/\(([^)]+)\)[^(]*$/', $descRaw, $matches)) {
             $embalagem = trim($matches[1]);
-            // Remove o par de parênteses da descrição limpa
             $descricaoLimpa = trim(str_replace('(' . $matches[1] . ')', '', $descRaw));
-            // A embalagem limpa p/ buscar na cot_price_list: Ex: 1 KG, 22,680 KG
-            $embalagemLimpaPriceList = $embalagem;
-            // Adicional: adiciona parênteses se precisar no DB, a documentação falava em (1 KG)
-            $embalagem = "($embalagem)"; 
+            $embalagemLimpaPriceList = $embalagem; // ex: "1 KG"
+            // Gera variantes normalizadas para busca na price list
+            // Ex: "1 KG" -> ["1 KG", "1.000 KG", "01 KG", "001 KG"]
+            // Ex: "22,680 KG" -> ["22,680 KG", "22.680 KG"]
+            $embCandidatos = [$embalagem];
+            // Extrai parte numerica e unidade
+            if (preg_match('/^([\d.,]+)\s*(.*)$/', $embalagem, $numMatch)) {
+                $numRaw  = $numMatch[1];
+                $unidade = trim($numMatch[2]); // ex: KG, G, ML, L
+                // Normaliza separadores
+                $numNorm = str_replace(',', '.', $numRaw); // "22,680" -> "22.680"
+                $numFloat = (float)$numNorm;
+                // Gera formatos alternativos
+                $alternativas = [
+                    $numNorm . ($unidade ? ' '.$unidade : ''),
+                    number_format($numFloat, 3, '.', '') . ($unidade ? ' '.$unidade : ''),
+                    number_format($numFloat, 0, '.', '') . ($unidade ? ' '.$unidade : ''),
+                    number_format($numFloat, 2, '.', '') . ($unidade ? ' '.$unidade : ''),
+                    trim(rtrim(number_format($numFloat, 3, '.', ''), '0'), '.') . ($unidade ? ' '.$unidade : ''),
+                ];
+                $embCandidatos = array_unique(array_merge($embCandidatos, $alternativas));
+            }
+            $embalagem = "($embalagem)"; // mantém para exibição
+        } else {
+            $embCandidatos = [];
         }
 
         // Calcula net
@@ -340,10 +360,15 @@ try {
         
         $codigo9 = substr(trim($codigo), 0, 9);
         
-        // Tenta buscar o preço pela Embalagem limpa (sem parênteses) ou pela versão inteira
-        $stmtPrice = $pdo->prepare("SELECT preco_net_usd FROM cot_price_list WHERE codigo LIKE ? AND (embalagem = ? OR embalagem = ?) ORDER BY id DESC LIMIT 1");
-        $stmtPrice->execute(["{$codigo9}%", $embalagemLimpaPriceList, $embalagem]);
-        $priceRow = $stmtPrice->fetch(PDO::FETCH_ASSOC);
+        // Busca na price list — tenta todos os formatos de embalagem gerados
+        $priceRow = null;
+        if (!empty($embCandidatos)) {
+            $placeholders = implode(',', array_fill(0, count($embCandidatos), '?'));
+            $params = array_merge(["{$codigo9}%"], array_values($embCandidatos));
+            $stmtPrice = $pdo->prepare("SELECT preco_net_usd FROM cot_price_list WHERE codigo LIKE ? AND embalagem IN ($placeholders) ORDER BY id DESC LIMIT 1");
+            $stmtPrice->execute($params);
+            $priceRow = $stmtPrice->fetch(PDO::FETCH_ASSOC);
+        }
 
         if ($priceRow && $priceRow['preco_net_usd'] > 0) {
             $preco_lista_usd = (float)$priceRow['preco_net_usd'];
