@@ -66,6 +66,9 @@ require_once 'conexao.php';
             <a href="download_template_price_list.php" class="btn btn-outline-success btn-sm">
                 <i class="fas fa-file-csv me-1"></i> Modelo CSV.
             </a>
+            <a href="exportar_price_list.php" class="btn btn-outline-info btn-sm text-dark border-info">
+                <i class="fas fa-download me-1"></i> Exportar CSV
+            </a>
             <button class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalAdd">
                 <i class="fas fa-plus me-1"></i> Novo Item
             </button>
