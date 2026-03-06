@@ -48,7 +48,7 @@ require_once __DIR__ . '/header.php';
         <div class="card shadow-sm mb-3 no-print">
             <div class="card-body py-2">
                 <div class="d-flex flex-wrap gap-3 align-items-center filter-bar">
-                    <strong>Filtrar:</strong>
+                    <strong>Filtrar :</strong>
                     <div class="btn-group btn-group-sm" role="group">
                         <input type="radio" class="btn-check" name="filtroStatus" id="fTodos" value="todos" checked>
                         <label class="btn btn-outline-secondary" for="fTodos">Todos</label>
