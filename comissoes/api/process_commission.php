@@ -5,6 +5,16 @@ header('Content-Type: application/json; charset=utf-8');
 ini_set('display_errors', 0);  // Nunca exibir errors que quebram JSON
 error_reporting(0);
 
+// Captura de Fatal Errors para retornar JSON mesmo se o script morrer
+register_shutdown_function(function() {
+    $error = error_get_last();
+    if ($error && in_array($error['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR])) {
+        ob_end_clean();
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['success' => false, 'message' => 'Fatal Error: ' . $error['message'] . ' em ' . $error['file'] . ':' . $error['line']]);
+    }
+});
+
 // Configs de limite de execução para arquivos grandes
 ini_set('max_execution_time', 600);
 ini_set('memory_limit', '512M');
@@ -66,19 +76,21 @@ try {
         return mb_strtoupper(trim(str_replace(['"', "'"], "", $h)), 'UTF-8');
     }
 
-    // Helper: Find Column Index by exact match preferred
+    // Helper: Find Column Index - aceita string ou array de termos
     function findColumnIndex($headers, $search) {
-        $search = normalizeHeader($search);
-        // Primeiro: tentativa de match exato
-        foreach ($headers as $index => $header) {
-            if (normalizeHeader($header) === $search) {
-                return $index;
+        $searches = is_array($search) ? $search : [$search];
+        // Primeiro: match exato
+        foreach ($searches as $term) {
+            $termNorm = normalizeHeader($term);
+            foreach ($headers as $index => $header) {
+                if (normalizeHeader($header) === $termNorm) return $index;
             }
         }
-        // Segundo: fallback parcial
-        foreach ($headers as $index => $header) {
-            if (strpos(normalizeHeader($header), $search) !== false) {
-                return $index;
+        // Segundo: match parcial
+        foreach ($searches as $term) {
+            $termNorm = normalizeHeader($term);
+            foreach ($headers as $index => $header) {
+                if (strpos(normalizeHeader($header), $termNorm) !== false) return $index;
             }
         }
         return -1;
