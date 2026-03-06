@@ -254,7 +254,7 @@ function renderTabela(data) {
             <td class="text-end fw-bold">$ ${fmtUSD(item.preco_net_usd)}</td>
             <td class="text-muted small">${item.lead_time||'—'}</td>
             <td class="text-center">
-                <button class="btn btn-sm btn-outline-warning" onclick="abrirEdicao(${item.id})" title="Editar">
+                <button class="btn btn-sm btn-outline-warning" onclick="abrirEdicao('${item.id}')" title="Editar">
                     <i class="fas fa-pencil-alt"></i>
                 </button>
             </td>`;
