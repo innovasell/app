@@ -248,7 +248,7 @@ require_once __DIR__ . '/header.php';
     function statusBadge(item) {
         const st = calcStatusItem(item);
         const map = {
-            sem_lista: '<span class="badge badge-sl">S/ Lista</span>',
+            sem_lista: '<span class="badge badge-sem-lista">S/ Lista</span>',
             aprovacao: '<span class="badge badge-aprovacao">⚠ Aprovação</span>',
             teto:      '<span class="badge badge-teto">★ Teto</span>',
             ok:        '<span class="badge badge-ok">✔ OK</span>'
