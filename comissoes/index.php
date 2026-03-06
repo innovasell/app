@@ -11,7 +11,7 @@ try {
         SELECT 
             b.id, 
             b.periodo, 
-            b.data_upload, 
+            b.created_at as data_upload, 
             COUNT(i.id) as total_itens,
             COALESCE(SUM(i.venda_net), 0) as total_venda_net,
             COALESCE(SUM(i.valor_comissao), 0) as total_comissoes,
