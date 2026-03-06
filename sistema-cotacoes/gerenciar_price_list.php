@@ -64,7 +64,7 @@ require_once 'conexao.php';
         </div>
         <div class="col-auto d-flex gap-2">
             <a href="download_template_price_list.php" class="btn btn-outline-success btn-sm">
-                <i class="fas fa-file-csv me-1"></i> Modelo CSV
+                <i class="fas fa-file-csv me-1"></i> Modelo CSV.
             </a>
             <button class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalAdd">
                 <i class="fas fa-plus me-1"></i> Novo Item
