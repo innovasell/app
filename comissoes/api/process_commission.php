@@ -137,8 +137,9 @@ try {
 
         $data_raw = isset($row[$idxPedData]) ? trim($row[$idxPedData]) : '';
         $data_nf = null;
-        if (preg_match('/(\d{2})[\/\-](\d{2})[\/\-](\d{4})/', $data_raw, $m)) {
-            $data_nf = "{$m[3]}-{$m[2]}-{$m[1]}";
+        if (preg_match('/(\d{2})[\/\-](\d{2})[\/\-](\d{2,4})/', $data_raw, $m)) {
+            $year = strlen($m[3]) == 2 ? "20{$m[3]}" : $m[3];
+            $data_nf = "{$year}-{$m[2]}-{$m[1]}";
         } elseif (preg_match('/(\d{4})[\/\-](\d{2})[\/\-](\d{2})/', $data_raw, $m)) {
             $data_nf = "{$m[1]}-{$m[2]}-{$m[3]}";
         }
@@ -273,8 +274,9 @@ try {
         // Extrai dados contextuais da Movimentação
         $data_mov_raw = ($idxMovData !== -1 && isset($row[$idxMovData])) ? trim($row[$idxMovData]) : '';
         $data_nf_mov = null;
-        if (preg_match('/(\d{2})[\/\-](\d{2})[\/\-](\d{4})/', $data_mov_raw, $m)) {
-            $data_nf_mov = "{$m[3]}-{$m[2]}-{$m[1]}";
+        if (preg_match('/(\d{2})[\/\-](\d{2})[\/\-](\d{2,4})/', $data_mov_raw, $m)) {
+            $year = strlen($m[3]) == 2 ? "20{$m[3]}" : $m[3];
+            $data_nf_mov = "{$year}-{$m[2]}-{$m[1]}";
         } elseif (preg_match('/(\d{4})[\/\-](\d{2})[\/\-](\d{2})/', $data_mov_raw, $m)) {
             $data_nf_mov = "{$m[1]}-{$m[2]}-{$m[3]}";
         }
