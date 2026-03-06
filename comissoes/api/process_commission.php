@@ -191,7 +191,7 @@ try {
     $idxMovValor     = findColumnIndex($movHeaders, 'VALOR'); // bruts
     
     // Adicionais Movimentações 
-    $idxMovData      = findColumnIndex($movHeaders, 'DATA');
+    $idxMovData      = findColumnIndex($movHeaders, ['DATA', 'DATA NF', 'DATA EMISS', 'EMISSAO']);
     $idxMovRep       = findColumnIndex($movHeaders, 'REPRESENTANTE');
     $idxMovCliente   = findColumnIndex($movHeaders, 'CLIENTE/REMETENTE');
     if ($idxMovCliente === -1) $idxMovCliente = findColumnIndex($movHeaders, 'CLIENTE');
@@ -256,10 +256,14 @@ try {
         // Extrai embalagem (ultimo par de parenteses)
         $embalagem = '';
         $descricaoLimpa = $descRaw;
+        $embalagemLimpaPriceList = '';
+
         if (preg_match('/\(([^)]+)\)[^(]*$/', $descRaw, $matches)) {
             $embalagem = trim($matches[1]);
             // Remove o par de parênteses da descrição limpa
             $descricaoLimpa = trim(str_replace('(' . $matches[1] . ')', '', $descRaw));
+            // A embalagem limpa p/ buscar na cot_price_list: Ex: 1 KG, 22,680 KG
+            $embalagemLimpaPriceList = $embalagem;
             // Adicional: adiciona parênteses se precisar no DB, a documentação falava em (1 KG)
             $embalagem = "($embalagem)"; 
         }
@@ -280,6 +284,8 @@ try {
         } elseif (preg_match('/(\d{4})[\/\-](\d{2})[\/\-](\d{2})/', $data_mov_raw, $m)) {
             $data_nf_mov = "{$m[1]}-{$m[2]}-{$m[3]}";
         }
+        
+        file_put_contents(__DIR__ . '/debug_csv.log', "Data lida MOV: '$data_mov_raw' -> Parse: '$data_nf_mov'\n", FILE_APPEND);
         $rep_mov = ($idxMovRep !== -1 && isset($row[$idxMovRep])) ? trim($row[$idxMovRep]) : '';
         $cliente_mov = ($idxMovCliente !== -1 && isset($row[$idxMovCliente])) ? trim($row[$idxMovCliente]) : '';
 
@@ -298,17 +304,18 @@ try {
 
         // Tenta buscar o preço de lista
         // (A cot_price_list costuma ter o codigo LIKE :cod e a embalagem EXATA)
-        $stmtPrice = $pdo->prepare("SELECT preco_net_usd FROM cot_price_list WHERE codigo LIKE ? AND embalagem = ? ORDER BY id DESC LIMIT 1");
-        $stmtPrice->execute([$codigo9 . '%', $embalagem]);
-        $priceRow = $stmtPrice->fetch(PDO::FETCH_ASSOC);
-        
         $preco_lista_usd = 0;
         $preco_lista_brl = 0;
-        $ptax_usado = 0;
-        $desconto_brl = 0;
-        $desconto_pct = 0;
-        $comissao_base_pct = 0;
         $lista_nao_encontrada = 1;
+        
+        $codigo9 = substr(trim($codigo), 0, 9);
+        
+        // Tenta buscar o preço pela Embalagem limpa (sem parênteses) ou pela versão inteira
+        $stmtPrice = $pdo->prepare("SELECT preco_net_usd FROM cot_price_list WHERE codigo LIKE ? AND (embalagem = ? OR embalagem = ?) ORDER BY id DESC LIMIT 1");
+        $stmtPrice->execute(["{$codigo9}%", $embalagemLimpaPriceList, $embalagem]);
+        $priceRow = $stmtPrice->fetch(PDO::FETCH_ASSOC);
+        
+        file_put_contents(__DIR__ . '/debug_csv.log', "Busca Cotacao: codigo '{$codigo9}%', embLimpa '{$embalagemLimpaPriceList}', embPar '{$embalagem}' -> Achou: " . json_encode($priceRow) . "\n", FILE_APPEND);
 
         if ($priceRow && $priceRow['preco_net_usd'] > 0) {
             $preco_lista_usd = (float)$priceRow['preco_net_usd'];
