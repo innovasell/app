@@ -1,6 +1,9 @@
 <?php
+ob_start(); // Captura qualquer output indesejado (Warnings, etc)
 session_start();
 header('Content-Type: application/json; charset=utf-8');
+ini_set('display_errors', 0);  // Nunca exibir errors que quebram JSON
+error_reporting(0);
 
 // Configs de limite de execução para arquivos grandes
 ini_set('max_execution_time', 600);
@@ -423,6 +426,7 @@ try {
 
     $pdo->commit();
 
+    ob_end_clean(); // descarta qualquer output acidental
     echo json_encode([
         'success' => true, 
         'batch_id' => $batchId, 
@@ -434,6 +438,7 @@ try {
     if (isset($pdo) && $pdo->inTransaction()) {
         $pdo->rollBack();
     }
+    ob_end_clean(); // descarta output acidental
     echo json_encode(['success' => false, 'message' => $e->getMessage()]);
 }
 
