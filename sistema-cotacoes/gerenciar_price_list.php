@@ -1,22 +1,34 @@
 <?php
 session_start();
 $pagina_ativa = 'gerenciar_price_list';
-require_once 'header.php';
 require_once 'conexao.php';
 ?>
-<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
-<style>
-    body { background-color: #f0f4f8; font-family: 'Montserrat', 'Segoe UI', sans-serif; }
-    .thead-dark th { background-color: #0a1e42; color: #fff; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.4px; border: none; }
-    .card { border: none; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
-    .card-header-custom { background: linear-gradient(135deg, #0a1e42 0%, #0047fa 100%); color: #fff; border-radius: 12px 12px 0 0; padding: 16px 20px; }
-    .btn-success-custom { background-color: #40883c; border-color: #40883c; color: #fff; }
-    .btn-success-custom:hover { background-color: #2c5e29; border-color: #2c5e29; color: #fff; }
-    #alertBox { display: none; }
-    .stat-badge { font-size: 0.85rem; padding: 6px 14px; border-radius: 8px; }
-</style>
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciar Price List - H Hansen</title>
 
-<div class="container-fluid px-4 py-3">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+    
+    <style>
+        body { background-color: #f0f4f8; font-family: 'Montserrat', 'Segoe UI', sans-serif; }
+        .thead-dark th { background-color: #0a1e42; color: #fff; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.4px; border: none; }
+        .card { border: none; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+        .card-header-custom { background: linear-gradient(135deg, #0a1e42 0%, #0047fa 100%); color: #fff; border-radius: 12px 12px 0 0; padding: 16px 20px; }
+        .btn-success-custom { background-color: #40883c; border-color: #40883c; color: #fff; }
+        .btn-success-custom:hover { background-color: #2c5e29; border-color: #2c5e29; color: #fff; }
+        #alertBox { display: none; }
+        .stat-badge { font-size: 0.85rem; padding: 6px 14px; border-radius: 8px; }
+    </style>
+</head>
+<body>
+
+    <?php require_once 'header.php'; ?>
+
+    <div class="container-fluid px-4 py-3">
 
     <!-- Alertas -->
     <div id="alertBox" class="alert mb-3" role="alert"></div>
