@@ -481,26 +481,20 @@ require_once __DIR__ . '/header.php';
             item.data_nf || '-',
             item.nfe,
             item.codigo,
-            (item.descricao||'-').substring(0,80), // Nova coluna Descrição
+            (item.descricao||'-').substring(0,80), // Produto
             (item.cliente||'-').substring(0,22),
             'R$ ' + parseFloat(item.venda_net||0).toLocaleString('pt-BR',{minimumFractionDigits:2}),
-            (parseFloat(item.desconto_pct||0)*100).toFixed(1) + '%',
-            (parseFloat(item.comissao_final_pct||0)*100).toFixed(2) + '%',
-            'R$ ' + parseFloat(item.valor_comissao||0).toLocaleString('pt-BR',{minimumFractionDigits:2}),
-            calcStatusItem(item).replace('_', ' ').toUpperCase()
+            'R$ ' + parseFloat(item.preco_lista_brl||0).toLocaleString('pt-BR',{minimumFractionDigits:2}),
+            (parseFloat(item.desconto_pct||0)*100).toFixed(1) + '%'
         ]);
 
         doc.autoTable({
             startY: 25,
-            head: [['Representante','Data','NF','Código','Produto','Cliente','Venda Net','Desc%','% Final','Comissão','Status']],
+            head: [['Representante','Data','NF','Código','Produto','Cliente','Venda Net','Pricelist','Desc%']],
             body: dados,
             styles: { fontSize: 8, cellPadding: 1.5, valign: 'middle' },
             headStyles: { fillColor: [13, 110, 253] },
-            alternateRowStyles: { fillColor: [245, 245, 245] },
-            columnStyles: {
-                4: { cellWidth: 90 }, // Produto
-                5: { cellWidth: 80 }, // Cliente
-            }
+            alternateRowStyles: { fillColor: [245, 245, 245] }
         });
 
         const filtroAtivo = document.querySelector('input[name=filtroStatus]:checked').value;
