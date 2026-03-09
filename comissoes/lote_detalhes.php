@@ -223,6 +223,7 @@ require_once __DIR__ . '/header.php';
     let filteredItems = [];
     let dtTable = null;
     let itensDivergentesGlobais = []; // Armazena os itens divergentes para o jsPDF
+    let itensParaReprocessarGlobais = []; // Armazena os itens para reprocessamento
     const modalEdit = new bootstrap.Modal(document.getElementById('modalEdit'));
     const modalSelectEmb = new bootstrap.Modal(document.getElementById('modalSelectEmb'));
 
@@ -537,6 +538,7 @@ require_once __DIR__ . '/header.php';
                     <div class="d-flex justify-content-between align-items-center mb-2">
                         <h6 class="text-${cor} mb-0"><i class="${icone} me-1"></i>${titulo} (${itens.length})</h6>
                         ${cor === 'warning' ? `<button class="btn btn-sm btn-outline-danger" onclick="gerarPdfDivergencias()"><i class="bi bi-file-earmark-pdf"></i> Gerar PDF S/Lista</button>` : ''}
+                        ${cor === 'success' ? `<button class="btn btn-sm btn-outline-success border-2 fw-bold" onclick="reprocessarAcharia(this)"><i class="fas fa-sync-alt"></i> Reprocessar Encontrados</button>` : ''}
                     </div>
                     ${extra}
                     <div class="table-responsive"><table class="table table-sm table-bordered" style="font-size:0.8rem">
@@ -556,6 +558,7 @@ require_once __DIR__ . '/header.php';
                 </div></div></div>`;
 
             if (jaAcharia.length) {
+                itensParaReprocessarGlobais = jaAcharia;
                 html += fmtGrupo('✅ Seriam encontrados com o algoritmo atual (reprocessar)', 'success', 'fas fa-check-circle', jaAcharia,
                     '<div class="alert alert-success py-1 small">Estes itens seriam resolvidos ao reprocessar a planilha com o algoritmo atual.</div>');
             }
@@ -635,6 +638,38 @@ require_once __DIR__ . '/header.php';
             btn.innerHTML = '<i class="bi bi-check-lg"></i> Associar Embalagem';
         }
     }
+
+    async function reprocessarAcharia(btn) {
+        if (!itensParaReprocessarGlobais || itensParaReprocessarGlobais.length === 0) return;
+        if (!confirm(`Deseja reprocessar automaticamente ${itensParaReprocessarGlobais.length} itens encontrados?`)) return;
+
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Processando...';
+
+        try {
+            const res = await fetch('api/reprocess_sem_lista.php', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ batch_id: BATCH_ID, itens: itensParaReprocessarGlobais })
+            });
+            const json = await res.json();
+            if (json.success) {
+                alert(`Concluído! ${json.sucessos} itens reprocessados (${json.falhas} falharam).`);
+                await diagnoseSemLista();
+                carregarDados();
+            } else {
+                alert('Erro ao reprocessar: ' + json.message);
+            }
+        } catch(e) {
+            alert('Erro de comunicação: ' + e.message);
+        } finally {
+            if(btn) {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-sync-alt"></i> Reprocessar Encontrados';
+            }
+        }
+    }
+
 
     // Geração do PDF específico do grupo "Código existe na Price List mas embalagem diverge"
     function gerarPdfDivergencias() {
