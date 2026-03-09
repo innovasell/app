@@ -468,7 +468,7 @@ require_once __DIR__ . '/header.php';
     // === PDF via jsPDF ===
     function gerarPDF() {
         const { jsPDF } = window.jspdf;
-        const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+        const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a3' });
 
         const batchNome = document.querySelector('h4.text-primary').textContent;
         doc.setFontSize(13);
