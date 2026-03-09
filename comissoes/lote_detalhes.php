@@ -61,12 +61,15 @@ require_once __DIR__ . '/header.php';
                         <input type="radio" class="btn-check" name="filtroStatus" id="fSL" value="sem_lista">
                         <label class="btn btn-outline-secondary" for="fSL">S/ Lista</label>
                     </div>
-                    <select class="form-select form-select-sm" id="filtroRep" style="width:220px;">
-                        <option value="">Todos os Representantes</option>
-                        <?php foreach($representantes as $r): ?>
-                        <option value="<?= htmlspecialchars($r) ?>"><?= htmlspecialchars($r) ?></option>
-                        <?php endforeach; ?>
-                    </select>
+                    <div class="d-flex flex-column align-items-start gap-1">
+                        <select class="form-select form-select-sm" id="filtroRep" multiple size="3" style="width:250px; font-size: 0.8rem;">
+                            <option value="">(Todos os Representantes)</option>
+                            <?php foreach($representantes as $r): ?>
+                            <option value="<?= htmlspecialchars($r) ?>"><?= htmlspecialchars($r) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                        <small class="text-muted" style="font-size: 0.7rem;">Segure CTRL para múltipla seleção</small>
+                    </div>
                     <button class="btn btn-sm btn-outline-primary" onclick="aplicarFiltros()"><i class="bi bi-funnel"></i> Aplicar</button>
                     <button class="btn btn-sm btn-outline-warning ms-2" onclick="diagnoseSemLista()" title="Analisar por que produtos S/Lista não foram encontrados na price list">
                         <i class="fas fa-microscope"></i> Diagnóstico S/Lista
@@ -340,12 +343,13 @@ require_once __DIR__ . '/header.php';
 
     function aplicarFiltros() {
         const status = document.querySelector('input[name=filtroStatus]:checked').value;
-        const rep    = document.getElementById('filtroRep').value;
+        const repSelect = document.getElementById('filtroRep');
+        const selectedReps = Array.from(repSelect.selectedOptions).map(opt => opt.value).filter(val => val !== "");
 
         filteredItems = allItems.filter(item => {
             const st = calcStatusItem(item);
             const matchStatus = status === 'todos' || st === status;
-            const matchRep    = !rep || item.representante === rep;
+            const matchRep    = selectedReps.length === 0 || selectedReps.includes(item.representante);
             return matchStatus && matchRep;
         });
         renderCards(filteredItems);
@@ -477,6 +481,7 @@ require_once __DIR__ . '/header.php';
             item.data_nf || '-',
             item.nfe,
             item.codigo,
+            (item.descricao||'-').substring(0,80), // Nova coluna Descrição
             (item.cliente||'-').substring(0,22),
             'R$ ' + parseFloat(item.venda_net||0).toLocaleString('pt-BR',{minimumFractionDigits:2}),
             (parseFloat(item.desconto_pct||0)*100).toFixed(1) + '%',
@@ -487,15 +492,21 @@ require_once __DIR__ . '/header.php';
 
         doc.autoTable({
             startY: 25,
-            head: [['Representante','Data','NF','Código','Cliente','Venda Net','Desc%','% Final','Comissão','Status']],
+            head: [['Representante','Data','NF','Código','Produto','Cliente','Venda Net','Desc%','% Final','Comissão','Status']],
             body: dados,
-            styles: { fontSize: 7, cellPadding: 1.5 },
+            styles: { fontSize: 7, cellPadding: 1.5, valign: 'middle' },
             headStyles: { fillColor: [13, 110, 253] },
             alternateRowStyles: { fillColor: [245, 245, 245] },
+            columnStyles: {
+                4: { cellWidth: 50 }, // Força a coluna 'Produto' a ter largura fixa e quebrar em multiplas linhas se precisar
+            }
         });
 
         const filtroAtivo = document.querySelector('input[name=filtroStatus]:checked').value;
-        const repFiltro = document.getElementById('filtroRep').value || 'Todos';
+        const repSelect = document.getElementById('filtroRep');
+        const selectedReps = Array.from(repSelect.selectedOptions).map(opt => opt.value).filter(val => val !== "");
+        const repFiltro = selectedReps.length ? selectedReps.join(', ') : 'Todos';
+        
         doc.setFontSize(7);
         doc.text(`Filtro: Status=${filtroAtivo} | Representante=${repFiltro} | Total: ${filteredItems.length} itens`, 14, doc.lastAutoTable.finalY + 5);
 
