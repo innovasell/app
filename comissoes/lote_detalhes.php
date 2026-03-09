@@ -498,7 +498,17 @@ require_once __DIR__ . '/header.php';
             headStyles: { fillColor: [13, 110, 253] },
             alternateRowStyles: { fillColor: [245, 245, 245] },
             columnStyles: {
-                4: { cellWidth: 50 }, // Força a coluna 'Produto' a ter largura fixa e quebrar em multiplas linhas se precisar
+                0: { cellWidth: 20 }, // Representante
+                1: { cellWidth: 17 }, // Data
+                2: { cellWidth: 23 }, // NF
+                3: { cellWidth: 18 }, // Código
+                4: { cellWidth: 'auto' }, // Produto (deixa expandir ou quebrar automaticamente)
+                5: { cellWidth: 'auto' }, // Cliente (deixa expandir automaticamente)
+                6: { cellWidth: 20 }, // Venda Net
+                7: { cellWidth: 12 }, // Desc%
+                8: { cellWidth: 12 }, // % Final
+                9: { cellWidth: 22 }, // Comissão
+                10: { cellWidth: 20 } // Status
             }
         });
 
