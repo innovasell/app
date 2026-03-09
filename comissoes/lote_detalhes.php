@@ -185,6 +185,31 @@ require_once __DIR__ . '/header.php';
         </div>
     </div>
 
+    <!-- Modal de Seleção de Embalagem -->
+    <div class="modal fade" id="modalSelectEmb" tabindex="-1">
+        <div class="modal-dialog modal-md">
+            <div class="modal-content">
+                <div class="modal-header bg-warning text-dark">
+                    <h5 class="modal-title"><i class="fas fa-box-open"></i> Selecionar Embalagem</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="selDivergId">
+                    <input type="hidden" id="selDivergPtax">
+                    <p class="mb-2"><strong>Produto:</strong> <span id="selDivergProdNfe"></span></p>
+                    <p class="mb-3 text-muted small">Escolha a embalagem correspondente na Price List para este item.</p>
+                    
+                    <label class="form-label fw-bold">Embalagem Disponível</label>
+                    <select class="form-select" id="selDivergOpcoes"></select>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-warning" onclick="salvarSelecaoEmb()"><i class="bi bi-check-lg"></i> Associar Embalagem</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
@@ -197,7 +222,9 @@ require_once __DIR__ . '/header.php';
     let allItems = [];
     let filteredItems = [];
     let dtTable = null;
+    let itensDivergentesGlobais = []; // Armazena os itens divergentes para o jsPDF
     const modalEdit = new bootstrap.Modal(document.getElementById('modalEdit'));
+    const modalSelectEmb = new bootstrap.Modal(document.getElementById('modalSelectEmb'));
 
     // Carrega dados ao abrir
     document.addEventListener('DOMContentLoaded', () => carregarDados());
@@ -503,14 +530,18 @@ require_once __DIR__ . '/header.php';
                         <td>${tentados}</td>
                         <td>${disponiveis}</td>
                         <td class="text-muted small">${(i.nfe||'')}</td>
+                        ${cor === 'warning' ? `<td class="text-center no-print"><button class="btn btn-sm btn-outline-warning" onclick='abrirModalSelecaoEmb(${JSON.stringify(i).replace(/'/g, "&apos;")})'>Selecionar EMB</button></td>` : ''}
                     </tr>`;
                 }).join('');
                 return `<div class="mb-4">
-                    <h6 class="text-${cor}"><i class="${icone} me-1"></i>${titulo} (${itens.length})</h6>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h6 class="text-${cor} mb-0"><i class="${icone} me-1"></i>${titulo} (${itens.length})</h6>
+                        ${cor === 'warning' ? `<button class="btn btn-sm btn-outline-danger" onclick="gerarPdfDivergencias()"><i class="bi bi-file-earmark-pdf"></i> Gerar PDF S/Lista</button>` : ''}
+                    </div>
                     ${extra}
                     <div class="table-responsive"><table class="table table-sm table-bordered" style="font-size:0.8rem">
                         <thead class="table-secondary"><tr>
-                            <th>Código</th><th>Emb. extraída</th><th>Candidatos tentados</th><th>Disponível na Price List</th><th>NF</th>
+                            <th>Código</th><th>Emb. extraída</th><th>Candidatos tentados</th><th>Disponível na Price List</th><th>NF</th>${cor === 'warning' ? '<th class="no-print">Ação</th>' : ''}
                         </tr></thead>
                         <tbody>${rows}</tbody>
                     </table></div></div>`;
@@ -528,8 +559,9 @@ require_once __DIR__ . '/header.php';
                 html += fmtGrupo('✅ Seriam encontrados com o algoritmo atual (reprocessar)', 'success', 'fas fa-check-circle', jaAcharia,
                     '<div class="alert alert-success py-1 small">Estes itens seriam resolvidos ao reprocessar a planilha com o algoritmo atual.</div>');
             }
+            itensDivergentesGlobais = codExiste.filter(i => !i.encontraria_agora);
             html += fmtGrupo('⚠️ Código existe na Price List mas embalagem diverge', 'warning', 'fas fa-exclamation-triangle',
-                codExiste.filter(i => !i.encontraria_agora),
+                itensDivergentesGlobais,
                 '<div class="alert alert-warning py-1 small">O código existe na price list mas a embalagem extraída do CSV não bate com nenhuma cadastrada. Verifique os formatos e atualize o cadastro se necessário.</div>');
             html += fmtGrupo('❌ Código não encontrado na Price List', 'danger', 'fas fa-times-circle',
                 semCodigo,
@@ -539,6 +571,116 @@ require_once __DIR__ . '/header.php';
         } catch(e) {
             body.innerHTML = `<div class="alert alert-danger">Erro ao carregar diagnóstico: ${e.message}</div>`;
         }
+    }
+
+    // Modal e Salvamento da Embalagem Divergente
+    function abrirModalSelecaoEmb(item) {
+        document.getElementById('selDivergId').value = item.id;
+        document.getElementById('selDivergPtax').value = item.ptax_usado;
+        document.getElementById('selDivergProdNfe').innerHTML = `<b>${item.codigo}</b> - ${item.nome_produto} <br> <small class="text-muted">NF: ${item.nfe} | Emb. Faturada: ${item.embalagem_db}</small>`;
+        
+        const sel = document.getElementById('selDivergOpcoes');
+        sel.innerHTML = '<option value="">-- Selecione a embalagem correta --</option>';
+        item.opcoes_price_list.forEach(op => {
+            const opt = document.createElement('option');
+            opt.value = JSON.stringify(op);
+            opt.textContent = `Emb: ${op.embalagem} — USD ${parseFloat(op.preco_net_usd).toFixed(4)}`;
+            sel.appendChild(opt);
+        });
+        
+        modalSelectEmb.show();
+    }
+
+    async function salvarSelecaoEmb() {
+        const id = document.getElementById('selDivergId').value;
+        const ptax = parseFloat(document.getElementById('selDivergPtax').value) || 0;
+        const selVal = document.getElementById('selDivergOpcoes').value;
+        
+        if (!selVal) { alert('Selecione uma embalagem!'); return; }
+        
+        const priceListOption = JSON.parse(selVal);
+        const precoUsd = parseFloat(priceListOption.preco_net_usd) || 0;
+        const precoBrl = precoUsd * ptax;
+
+        const payload = {
+            id: parseInt(id),
+            action: 'update',
+            embalagem: priceListOption.embalagem,
+            preco_lista_usd: precoUsd,
+            preco_lista_brl: precoBrl
+        };
+
+        const btn = document.querySelector('#modalSelectEmb .btn-warning');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Salvando...';
+
+        try {
+            const res = await fetch('api/update_commission_item.php', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(payload)
+            });
+            const json = await res.json();
+            if (json.success) {
+                modalSelectEmb.hide();
+                await diagnoseSemLista(); // Recarrega o diagnóstico
+                carregarDados(); // Recarrega a tabela de trás em background
+            } else {
+                alert('Erro ao salvar: ' + json.message);
+            }
+        } catch(e) {
+            alert('Erro de comunicação: ' + e.message);
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-check-lg"></i> Associar Embalagem';
+        }
+    }
+
+    // Geração do PDF específico do grupo "Código existe na Price List mas embalagem diverge"
+    function gerarPdfDivergencias() {
+        if (!itensDivergentesGlobais || itensDivergentesGlobais.length === 0) {
+            alert('Não há itens divergentes para gerar relatório.');
+            return;
+        }
+
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+
+        const batchNome = document.querySelector('h4.text-primary').textContent;
+        doc.setFontSize(13);
+        doc.text("Relatório de Divergência de Embalagem — S/Lista", 14, 14);
+        doc.setFontSize(10);
+        doc.text(batchNome, 14, 20);
+        doc.setFontSize(8);
+        doc.text('Gerado em: ' + new Date().toLocaleString('pt-BR'), 14, 25);
+
+        const dados = itensDivergentesGlobais.map(item => [
+            item.codigo,
+            (item.nome_produto || '-').substring(0, 40),
+            item.nfe || '-',
+            item.embalagem_db || '-',
+            // Pega as embalagens disponiveis e junta com virgula
+            item.opcoes_price_list.map(o => o.embalagem).join(', ') || '-',
+            (item.representante || '-').substring(0, 20)
+        ]);
+
+        doc.autoTable({
+            startY: 30,
+            head: [['CÓDIGO', 'NOME DO PRODUTO', 'NF', 'EMB VENDIDA', 'EMB DISPONÍVEL NA PRICE LIST', 'VENDEDOR']],
+            body: dados,
+            styles: { fontSize: 8, cellPadding: 2, valign: 'middle' },
+            headStyles: { fillColor: [240, 173, 78], textColor: [255, 255, 255] }, // Warning color (Orange)
+            alternateRowStyles: { fillColor: [252, 248, 227] }, // Light yellow/orange
+            columnStyles: {
+                1: { cellWidth: 70 }, // Produto maior
+                4: { cellWidth: 50 } // Emb disp
+            }
+        });
+
+        doc.setFontSize(8);
+        doc.text(`Total de itens: ${itensDivergentesGlobais.length}`, 14, doc.lastAutoTable.finalY + 5);
+
+        doc.save(`divergencias_lote_${BATCH_ID}.pdf`);
     }
 
     </script>

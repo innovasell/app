@@ -31,7 +31,7 @@ if (!$batch_id) {
 try {
     // Busca itens S/Lista do lote
     $stmt = $pdo->prepare("
-        SELECT id, codigo, embalagem, representante, cliente, nfe
+        SELECT id, codigo, embalagem, representante, cliente, nfe, descricao, ptax_usado
         FROM com_commission_items
         WHERE batch_id = ? AND lista_nao_encontrada = 1
         ORDER BY codigo
@@ -99,12 +99,15 @@ try {
             'codigo9'             => $codigo9,
             'embalagem_db'        => $embalagem,
             'emb_limpa'           => $embLimpa,
+            'nome_produto'        => $item['descricao'] ?? '',
+            'ptax_usado'          => (float)($item['ptax_usado'] ?? 0),
             'candidatos_tentados' => $candidatos,
             'opcoes_price_list'   => $opcoesPriceList,
             'encontraria_agora'   => !empty($encontrados),
             'match'               => $encontrados,
             'nfe'                 => $item['nfe'] ?? '',
             'cliente'             => $item['cliente'] ?? '',
+            'representante'       => $item['representante'] ?? '',
         ];
     }
 

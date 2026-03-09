@@ -27,7 +27,7 @@ try {
     $allowed = [
         'representante', 'cliente', 'cfop', 'codigo', 'descricao', 'embalagem',
         'qtde', 'valor_bruto', 'icms', 'pis', 'cofins', 'venda_net',
-        'preco_net_un', 'preco_lista_brl', 'pm_dias', 'obs', 'flag_aprovacao'
+        'preco_net_un', 'preco_lista_brl', 'preco_lista_usd', 'pm_dias', 'obs', 'flag_aprovacao'
     ];
 
     $fields = [];
