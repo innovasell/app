@@ -494,21 +494,12 @@ require_once __DIR__ . '/header.php';
             startY: 25,
             head: [['Representante','Data','NF','Código','Produto','Cliente','Venda Net','Desc%','% Final','Comissão','Status']],
             body: dados,
-            styles: { fontSize: 7, cellPadding: 1.5, valign: 'middle' },
+            styles: { fontSize: 8, cellPadding: 1.5, valign: 'middle' },
             headStyles: { fillColor: [13, 110, 253] },
             alternateRowStyles: { fillColor: [245, 245, 245] },
             columnStyles: {
-                0: { cellWidth: 20 }, // Representante
-                1: { cellWidth: 17 }, // Data
-                2: { cellWidth: 23 }, // NF
-                3: { cellWidth: 18 }, // Código
-                4: { cellWidth: 'auto' }, // Produto (deixa expandir ou quebrar automaticamente)
-                5: { cellWidth: 'auto' }, // Cliente (deixa expandir automaticamente)
-                6: { cellWidth: 20 }, // Venda Net
-                7: { cellWidth: 12 }, // Desc%
-                8: { cellWidth: 12 }, // % Final
-                9: { cellWidth: 22 }, // Comissão
-                10: { cellWidth: 20 } // Status
+                4: { cellWidth: 90 }, // Produto
+                5: { cellWidth: 80 }, // Cliente
             }
         });
 
