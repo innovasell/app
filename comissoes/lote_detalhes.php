@@ -1,4 +1,9 @@
 <?php
+// Previne cache agressivo do navegador e LiteSpeed (útil para que atualizações no JS inline tenham efeito imediato e dados do DB sejam sempre frescos)
+header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+header("Cache-Control: post-check=0, pre-check=0", false);
+header("Pragma: no-cache");
+
 require_once __DIR__ . '/../sistema-cotacoes/conexao.php';
 
 $batch_id = isset($_GET['batch_id']) ? (int)$_GET['batch_id'] : 0;
