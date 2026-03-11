@@ -138,10 +138,10 @@ foreach ($files as $arquivo) {
         continue;
     }
 
-    if (in_array($chNFe, $chaves_bd)) {
+    $ja_existe = in_array($chNFe, $chaves_bd);
+    if ($ja_existe) {
         $stats['ignoradas_duplicadas']++;
-        $stats['log'][] = ['tipo' => 'ignorada', 'msg' => "NF $chNFe ignorada — já existente no banco"];
-        continue;
+        $stats['log'][] = ['tipo' => 'ignorada', 'msg' => "NF $chNFe lida apenas para Excel — já existente no banco"];
     }
 
     // Extraction Dados NF
@@ -257,41 +257,43 @@ foreach ($files as $arquivo) {
     $nfe_resultados[] = $nfStruct;
     $stats['nfs'][] = $nfStruct; // pra devolver pro js renderizar
 
-    // Inserção Banco DB
-    try {
-        $pdo->beginTransaction();
-        
-        $sqlNF = "INSERT INTO fin_notas (lote_id, chNFe, nNF, dhEmi, cnpj_emit, nome_emit, cnpj_dest, nome_dest, v_prod, v_desc, v_frete, v_icms, v_ipi, v_pis, v_cofins, v_nf) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-        $stmtNF = $pdo->prepare($sqlNF);
-        $stmtNF->execute([
-            $dbLoteId, $chNFe, $nNF, $dhEmi, $cnpjEmit, $nomeEmit, $cnpjDest, $nomeDest,
-            $vProdNF, $vDescNF, $vFreteNF, $totICMS, $totIPI, $totPIS, $totCOFINS, $vNF
-        ]);
-        $notaId = $pdo->lastInsertId();
-
-        $sqlItem = "INSERT INTO fin_itens (nota_id, n_item, c_prod, x_prod, ncm, cfop, u_com, q_com, v_un_com, v_prod, v_desc, bc_pis_cofins, p_pis, v_pis, p_cofins, v_cofins, bc_icms, p_icms, v_icms, bc_ipi, p_ipi, v_ipi) 
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-        $stmtItem = $pdo->prepare($sqlItem);
-        foreach ($itens_db as $item) {
-            $stmtItem->execute([
-                $notaId, $item['n_item'], $item['c_prod'], $item['x_prod'], $item['ncm'], $item['cfop'],
-                $item['u_com'], $item['q_com'], $item['v_un_com'], $item['v_prod'], $item['v_desc'],
-                $item['bc_pis_cofins'], $item['p_pis'], $item['v_pis'], $item['p_cofins'], $item['v_cofins'],
-                $item['bc_icms'], $item['p_icms'], $item['v_icms'], $item['bc_ipi'], $item['p_ipi'], $item['v_ipi']
+    if (!$ja_existe) {
+        // Inserção Banco DB
+        try {
+            $pdo->beginTransaction();
+            
+            $sqlNF = "INSERT INTO fin_notas (lote_id, chNFe, nNF, dhEmi, cnpj_emit, nome_emit, cnpj_dest, nome_dest, v_prod, v_desc, v_frete, v_icms, v_ipi, v_pis, v_cofins, v_nf) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            $stmtNF = $pdo->prepare($sqlNF);
+            $stmtNF->execute([
+                $dbLoteId, $chNFe, $nNF, $dhEmi, $cnpjEmit, $nomeEmit, $cnpjDest, $nomeDest,
+                $vProdNF, $vDescNF, $vFreteNF, $totICMS, $totIPI, $totPIS, $totCOFINS, $vNF
             ]);
+            $notaId = $pdo->lastInsertId();
+
+            $sqlItem = "INSERT INTO fin_itens (nota_id, n_item, c_prod, x_prod, ncm, cfop, u_com, q_com, v_un_com, v_prod, v_desc, bc_pis_cofins, p_pis, v_pis, p_cofins, v_cofins, bc_icms, p_icms, v_icms, bc_ipi, p_ipi, v_ipi) 
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            $stmtItem = $pdo->prepare($sqlItem);
+            foreach ($itens_db as $item) {
+                $stmtItem->execute([
+                    $notaId, $item['n_item'], $item['c_prod'], $item['x_prod'], $item['ncm'], $item['cfop'],
+                    $item['u_com'], $item['q_com'], $item['v_un_com'], $item['v_prod'], $item['v_desc'],
+                    $item['bc_pis_cofins'], $item['p_pis'], $item['v_pis'], $item['p_cofins'], $item['v_cofins'],
+                    $item['bc_icms'], $item['p_icms'], $item['v_icms'], $item['bc_ipi'], $item['p_ipi'], $item['v_ipi']
+                ]);
+            }
+
+            $pdo->commit();
+            $chaves_bd[] = $chNFe;
+            $stats['processadas']++;
+            $qts_inseridas_db++;
+            $stats['log'][] = ['tipo' => 'ok', 'msg' => "NF $nNF processada — ".count($itens_db)." itens armazenados"];
+
+        } catch (Exception $e) {
+            $pdo->rollBack();
+            $stats['erros']++;
+            $stats['log'][] = ['tipo' => 'erro', 'msg' => "Erro de Banco de Dados ao transacionar o XML para NF $nNF."];
         }
-
-        $pdo->commit();
-        $chaves_bd[] = $chNFe;
-        $stats['processadas']++;
-        $qts_inseridas_db++;
-        $stats['log'][] = ['tipo' => 'ok', 'msg' => "NF $nNF processada — ".count($itens_db)." itens"];
-
-    } catch (Exception $e) {
-        $pdo->rollBack();
-        $stats['erros']++;
-        $stats['log'][] = ['tipo' => 'erro', 'msg' => "Erro de Banco de Dados ao transacionar o XML para NF $nNF."];
     }
 }
 
