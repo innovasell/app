@@ -110,6 +110,13 @@ switch ($target) {
         }
         break;
 
+    case 'financeiro':
+        if (($user['acessos']['financeiro'] ?? 0) == 1 || $user['admin'] == 1) {
+            header("Location: financeiro/index.php");
+            exit;
+        }
+        break;
+        
     case 'formulas':
         if (($user['acessos']['formulas'] ?? 0) == 1) {
             header("Location: gerador-formulas/index.php");
