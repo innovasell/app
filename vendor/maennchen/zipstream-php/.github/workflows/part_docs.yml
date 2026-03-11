@@ -1,0 +1,53 @@
+on:
+  workflow_call: {}
+
+name: "Documentation"
+
+permissions:
+  contents: read
+
+jobs:
+  generate:
+    name: "Generate"
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@df199fb7be9f65074067a9eb93f12bb4c5547cf2 # v2.13.3
+        with:
+          egress-policy: audit
+
+      - name: Checkout Code
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - name: SetUp PHP
+        id: setup-php
+        uses: shivammathur/setup-php@44454db4f0199b8b9685a5d763dc37cbf79108e1 # v2
+        with:
+          php-version-file: ".tool-versions"
+          tools: phive
+      - name: Cache Tools
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        id: cache
+        with:
+          path: ~/.phive
+          key: tools-${{ runner.os }}-${{ steps.setup-php.outputs.php-version }}-${{ hashFiles('**/phars.xml') }}
+          restore-keys: |
+            tools-${{ runner.os }}-${{ steps.setup-php.outputs.php-version }}-
+            tools-${{ steps.setup-php.outputs.php-version }}-
+            tools-
+      - name: Install Tools
+        run: composer run install:tools
+        env:
+          GITHUB_AUTH_TOKEN: "${{ github.token}}"
+      - name: Generate Docs
+        run: composer run docs:generate
+      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: docs
+          path: docs
+      - name: Package for GitHub Pages
+        uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4.0.0
+        with:
+          path: docs
+
