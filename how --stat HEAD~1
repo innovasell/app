@@ -1,0 +1,39 @@
+[33mcommit f51a0601874ec622ff3679a482a9c6da45ca2e27[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m
+Author: hectorhansen <hector.hansen@hotmail.com>
+Date:   Wed Mar 11 10:09:41 2026 -0300
+
+    criação sistema financeiro
+
+ composer.json                           |   5 [32m+[m
+ composer.lock                           | 581 [32m+++++++++++++++++++++++++++++++[m
+ financeiro/.htaccess                    |   5 [32m+[m
+ financeiro/api/export_excel.php         | 282 [32m+++++++++++++++[m
+ financeiro/api/process_nfe.php          | 337 [32m++++++++++++++++++[m
+ financeiro/config/regime_tributario.php |  27 [32m++[m
+ financeiro/header.php                   | 219 [32m++++++++++++[m
+ financeiro/index.php                    | 364 [32m+++++++++++++++++++[m
+ financeiro/setup_db_financeiro.php      |  72 [32m++++[m
+ sso_redirect.php                        |   7 [32m+[m
+ vendor/autoload.php                     |  22 [32m++[m
+ vendor/composer/ClassLoader.php         | 579 [32m+++++++++++++++++++++++++++++++[m
+ vendor/composer/InstalledVersions.php   | 396 [32m+++++++++++++++++++++[m
+ vendor/composer/LICENSE                 |  21 [32m++[m
+ vendor/composer/autoload_classmap.php   |  10 [32m+[m
+ vendor/composer/autoload_files.php      |  10 [32m+[m
+ vendor/composer/autoload_namespaces.php |  10 [32m+[m
+ vendor/composer/autoload_psr4.php       |  16 [32m+[m
+ vendor/composer/autoload_real.php       |  48 [32m+++[m
+ vendor/composer/autoload_static.php     |  91 [32m+++++[m
+ vendor/composer/installed.json          | 595 [32m++++++++++++++++++++++++++++++++[m
+ vendor/composer/installed.php           | 104 [32m++++++[m
+ vendor/composer/pcre                    |   1 [32m+[m
+ vendor/ezyang/htmlpurifier              |   1 [32m+[m
+ vendor/maennchen/zipstream-php          |   1 [32m+[m
+ vendor/markbaker/complex                |   1 [32m+[m
+ vendor/markbaker/matrix                 |   1 [32m+[m
+ vendor/phpoffice/phpspreadsheet         |   1 [32m+[m
+ vendor/psr/http-client                  |   1 [32m+[m
+ vendor/psr/http-factory                 |   1 [32m+[m
+ vendor/psr/http-message                 |   1 [32m+[m
+ vendor/psr/simple-cache                 |   1 [32m+[m
+ 32 files changed, 3811 insertions(+)

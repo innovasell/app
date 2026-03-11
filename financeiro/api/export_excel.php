@@ -1,6 +1,6 @@
 <?php
-// Exige que o autoloader instanciado pelo Composer aponte para nossa pasta vendor
-require_once __DIR__ . '/../../../vendor/autoload.php';
+// Exige que o autoloader instanciado pelo Composer aponte para nossa pasta vendor na raiz `app/`
+require_once __DIR__ . '/../../vendor/autoload.php';
 
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
