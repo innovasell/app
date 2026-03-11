@@ -11,6 +11,18 @@ use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 
 header('Cache-Control: no-store, no-cache, must-revalidate');
 header('Pragma: no-cache');
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
+
+register_shutdown_function(function () {
+    $error = error_get_last();
+    if ($error && in_array($error['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR])) {
+        ob_clean();
+        header('Content-Type: text/html');
+        echo "<h2>Erro Fatal Capturado:</h2>";
+        echo "<pre>" . print_r($error, true) . "</pre>";
+    }
+});
 
 $uniqid = $_GET['session_id'] ?? null;
 
