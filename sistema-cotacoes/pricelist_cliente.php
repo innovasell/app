@@ -213,9 +213,9 @@ if (!isset($_SESSION['representante_email'])) {
                         <th class="text-end">KG 17–24</th>
                         <th class="text-end">KG 2025</th>
                         <th class="text-end">KG Orç. 2026</th>
-                        <th class="text-end">Preço Ant. (USD)</th>
-                        <th class="text-end">Preço 2025 (USD)</th>
-                        <th class="text-end">Preço Orç. 2026 (USD)</th>
+                        <th class="text-end">Preço Médo NET 17-24 (USD)</th>
+                        <th class="text-end">Preço Médo NET 25 (USD)</th>
+                        <th class="text-end">Preço Médo NET 26 (USD)</th>
                         <th class="text-end">Price List (USD)</th>
                         <th class="text-center"></th>
                     </tr>
@@ -418,7 +418,7 @@ btnLimpar.addEventListener('click', () => {
 document.getElementById('btnExportar').addEventListener('click', () => {
     if (!todosOsProdutos.length) return;
     const headers = ['Produto','Fabricante','Embalagem (KG)','KG 17-24','KG 2025','KG Orç.2026',
-                     'Preço Ant. USD','Preço 2025 USD','Preço Orç.2026 USD','Price List USD'];
+                     'Preço Médo NET 17-24 USD','Preço Médo NET 25 USD','Preço Médo NET 26 USD','Price List USD'];
     const rows = todosOsProdutos.map(p => [
         p.produto, p.fabricante, p.embalagem, p.kg_historico, p.kg_realizado_2025,
         p.kg_orcado_2026, p.preco_hist_usd, p.preco_2025_usd,
