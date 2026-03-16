@@ -17,6 +17,11 @@ if (!isset($_SESSION['representante_email'])) {
 
 $action = $_GET['action'] ?? '';
 
+// ─── Migration: garante que coluna prazo_medio existe ────────────────────────
+try {
+    $pdo->exec("ALTER TABLE cot_budget_cliente ADD COLUMN IF NOT EXISTS prazo_medio VARCHAR(100) NULL DEFAULT NULL");
+} catch (Throwable $migEx) { /* ignora se já existe ou DB não suporta IF NOT EXISTS */ }
+
 // ─── Buscar clientes ──────────────────────────────────────────────────────────
 if ($action === 'buscar_clientes') {
     $q = trim($_GET['q'] ?? '');
@@ -172,6 +177,57 @@ if ($action === 'buscar_pricelist_produto') {
         echo json_encode($rows, JSON_UNESCAPED_UNICODE);
     } catch (PDOException $e) {
         echo json_encode(['erro' => $e->getMessage()]);
+    }
+    exit();
+}
+
+// ─── Buscar TODOS os produtos (tabela geral) ─────────────────────────────────
+if ($action === 'buscar_todos') {
+    try {
+        // 1. Busca todos os registros com JOIN no cliente
+        $sql = "SELECT
+                    b.produto,
+                    COALESCE(c.razao_social, c.nome, b.cnpj) AS cliente,
+                    b.cliente_origem AS cliente_destino,
+                    b.vendedor_ajustado AS vendedor,
+                    b.fabricante,
+                    b.embalagem,
+                    b.kg_historico,
+                    b.kg_realizado_2025,
+                    b.kg_orcado_2026,
+                    b.preco_hist_usd,
+                    b.preco_2025_usd,
+                    b.preco_orcado_2026_usd,
+                    b.prazo_medio
+                FROM cot_budget_cliente b
+                LEFT JOIN cot_clientes c ON c.cnpj = b.cnpj
+                ORDER BY b.produto ASC, cliente ASC";
+        $stmt = $pdo->query($sql);
+        $produtos = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // 2. Enriquece com price_list_usd via mapa em memória
+        try {
+            $plStmt = $pdo->query("SELECT produto, embalagem, preco_net_usd FROM cot_price_list");
+            $priceMap = [];
+            while ($row = $plStmt->fetch(PDO::FETCH_ASSOC)) {
+                $nome = mb_strtolower(trim($row['produto']), 'UTF-8');
+                $emb  = number_format((float)$row['embalagem'], 3, '.', '');
+                $priceMap[$nome . '|' . $emb] = $row['preco_net_usd'];
+            }
+            foreach ($produtos as &$p) {
+                $nome = mb_strtolower(trim($p['produto'] ?? ''), 'UTF-8');
+                $emb  = number_format((float)($p['embalagem'] ?? 0), 3, '.', '');
+                $p['price_list_usd'] = $priceMap[$nome . '|' . $emb] ?? null;
+            }
+            unset($p);
+        } catch (Throwable $plEx) {
+            foreach ($produtos as &$p) { $p['price_list_usd'] = null; }
+            unset($p);
+        }
+
+        echo json_encode($produtos, JSON_UNESCAPED_UNICODE | JSON_PARTIAL_OUTPUT_ON_ERROR);
+    } catch (PDOException $e) {
+        echo json_encode(['__erro' => $e->getMessage()], JSON_UNESCAPED_UNICODE);
     }
     exit();
 }
