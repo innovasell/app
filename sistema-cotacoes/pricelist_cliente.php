@@ -18,7 +18,14 @@ if (!isset($_SESSION['representante_email'])) {
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
     <style>
-        body { background: #f5f7fa; font-family: 'Montserrat', sans-serif; }
+        body {
+            background: #f5f7fa;
+            font-family: 'Montserrat', sans-serif;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
 
         /* ─── Header ───────────────────────────────────────────────── */
         .page-header {
@@ -154,9 +161,6 @@ if (!isset($_SESSION['representante_email'])) {
             <div class="d-flex gap-2 align-items-center">
                 <button class="btn btn-sm btn-light" id="btnLimparFiltros" title="Limpar todos os filtros">
                     <i class="bi bi-x-circle me-1 text-danger"></i>Limpar filtros
-                </button>
-                <button class="btn btn-sm btn-light" id="btnExportar">
-                    <i class="bi bi-file-earmark-excel me-1 text-success"></i>Exportar CSV
                 </button>
             </div>
         </div>
@@ -336,31 +340,13 @@ document.getElementById('btnLimparFiltros').addEventListener('click', () => {
     renderTabela(todosOsProdutos);
 });
 
-// ─── Exportar CSV ─────────────────────────────────────────────────────────────────
-document.getElementById('btnExportar').addEventListener('click', () => {
-    if (!todosOsProdutos.length) return;
-    const headers = [
-        'Produto','Cliente','Cliente Destino','Vendedor','Fabricante',
-        'Embalagem (KG)','KG 17-24','KG 2025','KG Orç.2026',
-        'Preço Médio NET 17-24 USD','Preço Médio NET 2025 USD','Preço Médio NET 2026 USD',
-        'Price List USD','Prazo Médio'
-    ];
-    const rows = todosOsProdutos.map(p => [
-        p.produto, p.cliente, p.cliente_destino, p.vendedor, p.fabricante,
-        p.embalagem, p.kg_historico, p.kg_realizado_2025, p.kg_orcado_2026,
-        p.preco_hist_usd, p.preco_2025_usd, p.preco_orcado_2026_usd,
-        p.price_list_usd, p.prazo_medio
-    ].map(v => (v === null || v === undefined) ? '' : String(v).replace(/;/g, ',')));
-
-    const bom  = '\xEF\xBB\xBF';
-    const csv  = bom + [headers, ...rows].map(r => r.join(';')).join('\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url  = URL.createObjectURL(blob);
-    const a    = document.createElement('a');
-    a.href = url;
-    a.download = `pricelist_geral_${new Date().toISOString().slice(0,10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+// ─── Bloquear cópia e menu de contexto ────────────────────────────────────────
+document.addEventListener('copy', e => e.preventDefault());
+document.addEventListener('contextmenu', e => e.preventDefault());
+document.addEventListener('keydown', e => {
+    // Bloqueia Ctrl+C, Ctrl+A, Ctrl+S, PrintScreen
+    if ((e.ctrlKey || e.metaKey) && ['c','a','s','p'].includes(e.key.toLowerCase())) e.preventDefault();
+    if (e.key === 'PrintScreen') e.preventDefault();
 });
 
 // ─── Iniciar ──────────────────────────────────────────────────────────────────────
