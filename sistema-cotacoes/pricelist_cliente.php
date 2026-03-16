@@ -213,9 +213,9 @@ if (!isset($_SESSION['representante_email'])) {
                         <th class="text-end">KG 17–24</th>
                         <th class="text-end">KG 2025</th>
                         <th class="text-end">KG Orç. 2026</th>
-                        <th class="text-end">Preço Médo NET 17-24 (USD)</th>
-                        <th class="text-end">Preço Médo NET 25 (USD)</th>
-                        <th class="text-end">Preço Médo NET 26 (USD)</th>
+                        <th class="text-end">Preço Médio NET<br>17-24 (USD)</th>
+                        <th class="text-end">Preço Médio NET<br>2025 (USD)</th>
+                        <th class="text-end">Preço Médio NET<br>2026 (USD)</th>
                         <th class="text-end">Price List (USD)</th>
                         <th class="text-center"></th>
                     </tr>
