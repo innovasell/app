@@ -97,6 +97,7 @@ try {
         desconto_brl      = ?,
         desconto_pct      = ?,
         comissao_base_pct = ?,
+        pm_dias           = ?,
         pm_semanas        = ?,
         ajuste_prazo_pct  = ?,
         comissao_final_pct= ?,
@@ -169,14 +170,16 @@ try {
         }
 
         // ── Warning: PM = 0 ──────────────────────────────────────────────────
+        $pm_corrigido = false;
         if ($pm_dias <= 0) {
             $resultados['warnings'][] = [
                 'tipo'    => 'sem_pm',
                 'item_id' => $id,
                 'nfe'     => $nfe_label,
-                'msg'     => "Prazo Médio = 0 dias para NF {$item['nfe']}. O ajuste de PM não será aplicado (assume baseline de 28 dias). Edite manualmente o campo PM se souber o prazo correto."
+                'msg'     => "Prazo Médio = 0 dias para NF {$item['nfe']}. Baseline de 28 dias aplicado (sem ajuste de prazo). Edite manualmente o campo PM se souber o prazo correto (ex: 35 dias para 28/35/42d)."
             ];
-            $pm_dias = 28; // usa baseline para não gerar bônus indevido
+            $pm_dias = 28; // salva 28 no banco para sincronizar exibição/cálculo
+            $pm_corrigido = true;
         }
 
         // ── Recalcula percentuais ─────────────────────────────────────────────
@@ -210,6 +213,7 @@ try {
             round($desconto_brl, 4),
             round($desconto_pct, 4),
             round($base, 4),
+            round($pm_dias, 4),        // pm_dias (corrigido para 28 se era 0)
             round($pm_semanas, 4),
             round($ajuste, 4),
             round($comissao_final, 4),
