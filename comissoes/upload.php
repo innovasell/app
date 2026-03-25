@@ -37,6 +37,11 @@ require_once __DIR__ . '/header.php';
                         </div>
 
                         <form id="uploadForm" enctype="multipart/form-data">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Nome do Lote <small class="text-muted">(opcional)</small></label>
+                                <input type="text" name="nome_lote" class="form-control" placeholder="Ex: Janeiro 2026 — Ancla's">
+                            </div>
+
                             <div class="upload-area" id="dropZone">
                                 <i class="bi bi-cloud-arrow-up upload-icon"></i>
                                 <h4>Arraste e solte seu arquivo ZIP aqui</h4>
@@ -46,18 +51,14 @@ require_once __DIR__ . '/header.php';
                             </div>
 
                             <div class="mt-4">
-                                <label class="form-label fw-bold">Arquivo de Vendedores (CSV) <small
-                                        class="text-muted">(Opcional)</small></label>
+                                <label class="form-label fw-bold">Arquivo de Vendedores (CSV) <small class="text-muted">(Opcional)</small></label>
                                 <div class="input-group">
                                     <input type="file" name="sellers_csv" class="form-control" accept=".csv">
-                                    <a href="api/download_template_sellers.php" class="btn btn-outline-secondary"
-                                        title="Baixar Modelo">
+                                    <a href="api/download_template_sellers.php" class="btn btn-outline-secondary" title="Baixar Modelo">
                                         <i class="bi bi-download"></i> Modelo
                                     </a>
                                 </div>
-                                <div class="form-text">Envie um arquivo CSV com as colunas:
-                                    <code>Numero_NF;Nome_Vendedor</code> para vincular automaticamente.
-                                </div>
+                                <div class="form-text">CSV com colunas: <code>Numero_NF;Nome_Vendedor</code> para vincular automaticamente.</div>
                             </div>
 
                             <div class="d-grid mt-4">
@@ -66,6 +67,7 @@ require_once __DIR__ . '/header.php';
                                 </button>
                             </div>
                         </form>
+
                     </div>
                 </div>
             </div>
@@ -100,111 +102,81 @@ require_once __DIR__ . '/header.php';
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        const dropZone = document.getElementById('dropZone');
-        const zipInput = document.getElementById('zipInput');
-        const fileNameDisplay = document.getElementById('fileName');
+        const dropZone   = document.getElementById('dropZone');
+        const zipInput   = document.getElementById('zipInput');
+        const fileNameEl = document.getElementById('fileName');
         const uploadForm = document.getElementById('uploadForm');
         const loadingOverlay = document.getElementById('loadingOverlay');
         const resultModal = new bootstrap.Modal(document.getElementById('resultModal'));
-        const btnGoValidation = document.getElementById('btnGoValidation');
 
-        // Drag and Drop
         dropZone.addEventListener('click', () => zipInput.click());
-
-        dropZone.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            dropZone.style.borderColor = '#0d6efd';
-            dropZone.style.backgroundColor = '#f1f8ff';
+        dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.style.borderColor='#0d6efd'; });
+        dropZone.addEventListener('dragleave', e => { e.preventDefault(); dropZone.style.borderColor=''; });
+        dropZone.addEventListener('drop', e => {
+            e.preventDefault(); dropZone.style.borderColor='';
+            if (e.dataTransfer.files.length) { zipInput.files = e.dataTransfer.files; updateFileName(); }
         });
-
-        dropZone.addEventListener('dragleave', (e) => {
-            e.preventDefault();
-            dropZone.style.borderColor = '#dee2e6';
-            dropZone.style.backgroundColor = '#fff';
-        });
-
-        dropZone.addEventListener('drop', (e) => {
-            e.preventDefault();
-            dropZone.style.borderColor = '#dee2e6';
-            dropZone.style.backgroundColor = '#fff';
-
-            if (e.dataTransfer.files.length) {
-                zipInput.files = e.dataTransfer.files;
-                updateFileName();
-            }
-        });
-
         zipInput.addEventListener('change', updateFileName);
+        function updateFileName() { fileNameEl.textContent = zipInput.files.length ? '📎 ' + zipInput.files[0].name : ''; }
 
-        function updateFileName() {
-            if (zipInput.files.length) {
-                fileNameDisplay.textContent = zipInput.files[0].name;
-            } else {
-                fileNameDisplay.textContent = '';
-            }
-        }
-
-        // Submit
         uploadForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            if (!zipInput.files.length) {
-                alert("Selecione um arquivo ZIP!");
-                return;
-            }
-
-            const formData = new FormData(uploadForm);
+            if (!zipInput.files.length) { alert('Selecione um arquivo ZIP!'); return; }
 
             loadingOverlay.style.display = 'flex';
-            btnGoValidation.classList.add('d-none');
+            const formData = new FormData(uploadForm);
 
             try {
-                const response = await fetch('api/process_upload.php', {
-                    method: 'POST',
-                    body: formData
-                });
-
-                const result = await response.json();
-
+                const response = await fetch('api/process_upload.php', { method: 'POST', body: formData });
+                const result   = await response.json();
                 loadingOverlay.style.display = 'none';
 
                 const modalTitle = document.getElementById('modalTitle');
-                const modalBody = document.getElementById('modalBody');
+                const modalBody  = document.getElementById('modalBody');
+                const btnLote    = document.getElementById('btnGoValidation');
 
                 if (result.success) {
-                    modalTitle.className = "modal-title text-success";
-                    modalTitle.textContent = "Sucesso!";
-                    modalBody.innerHTML = `
-                    <p class="fs-5">${result.message}</p>
-                    <ul class="list-group">
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            Arquivos Processados
-                            <span class="badge bg-primary rounded-pill">${result.processed_count}</span>
-                        </li>
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            Itens Importados
-                            <span class="badge bg-success rounded-pill">${result.imported_count}</span>
-                        </li>
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            Ignorados (CFOP)
-                            <span class="badge bg-secondary rounded-pill">${result.ignored_count}</span>
-                        </li>
-                    </ul>
-                `;
-                    btnGoValidation.classList.remove('d-none');
-                } else {
-                    modalTitle.className = "modal-title text-danger";
-                    modalTitle.textContent = "Erro";
-                    modalBody.innerHTML = `<p class="text-danger">${result.error || 'Erro desconhecido'}</p>`;
-                }
+                    modalTitle.className = 'modal-title text-success';
+                    modalTitle.textContent = '✔ Upload processado!';
 
+                    let html = `<ul class="list-group mb-3">
+                        <li class="list-group-item d-flex justify-content-between"><span>Arquivos XML lidos</span><span class="badge bg-primary">${result.processed_count}</span></li>
+                        <li class="list-group-item d-flex justify-content-between"><span>Itens importados</span><span class="badge bg-success">${result.imported_count}</span></li>
+                        <li class="list-group-item d-flex justify-content-between"><span>Ignorados (CFOP)</span><span class="badge bg-secondary">${result.ignored_count}</span></li>
+                    </ul>`;
+
+                    if (result.tem_warnings && result.warnings.length > 0) {
+                        html += `<div class="alert alert-warning py-2">
+                            <strong><i class="bi bi-exclamation-triangle-fill me-1"></i> ${result.warnings.length} item(ns) com pendências:</strong>
+                            <ul class="mb-0 mt-1" style="font-size:0.82rem; max-height:200px; overflow-y:auto">`;
+                        result.warnings.forEach(w => {
+                            html += `<li><strong>${w.nfe}</strong> — ${w.produto}<br><small class="text-muted">${w.avisos.join(' | ')}</small></li>`;
+                        });
+                        html += `</ul></div>
+                        <div class="alert alert-info py-2 small">
+                            <i class="bi bi-info-circle me-1"></i> Use o botão <strong>Reprocessar Lote</strong> após corrigir manualmente os itens pendentes.
+                        </div>`;
+                    }
+
+                    modalBody.innerHTML = html;
+                    btnLote.href = `lote_detalhes.php?batch_id=${result.batch_id}`;
+                    btnLote.textContent = '→ Ir para o Lote';
+                    btnLote.classList.remove('d-none');
+                } else {
+                    modalTitle.className = 'modal-title text-danger';
+                    modalTitle.textContent = 'Erro';
+                    modalBody.innerHTML = `<div class="alert alert-danger">${result.error || 'Erro desconhecido'}</div>`;
+                    btnLote.classList.add('d-none');
+                }
                 resultModal.show();
 
             } catch (error) {
                 loadingOverlay.style.display = 'none';
-                alert("Erro na comunicação com o servidor: " + error.message);
+                alert('Erro na comunicação com o servidor: ' + error.message);
             }
         });
     </script>
+
 
 </body>
 
