@@ -314,10 +314,30 @@ try {
                     // Lookup seller
                     $sellerName = $sellersMap[str_pad($nfeNumber, 9, '0', STR_PAD_LEFT)] ?? ($sellersMap[$nfeNumber] ?? null);
 
-                    // Calculate USD Unit Price
-                    $ptaxUsed = $ptaxCache[$nfeDate] ?? null;
-                    $unitUsd = null;
+                    // ── PTAX: prioridade para o valor do infCpl da própria NF ──────────
+                    // O campo infCpl traz "DOLAR DO FATURAMENTO: 5,3118" — esta é a taxa
+                    // negociada no momento do faturamento e deve ser usada no cálculo de
+                    // comissão. Só usa a PTAX BCB do banco como fallback.
+                    $ptaxUsed = null;
 
+                    // 1. Extrai do infCpl da NF (campo "DOLAR DO FATURAMENTO")
+                    $infCplText = (string)($xml->xpath('//nfe:infAdic/nfe:infCpl')[0] ?? '');
+                    if (!$infCplText) {
+                        $infCplText = (string)($xml->xpath('//*[local-name()="infCpl"]')[0] ?? '');
+                    }
+                    if ($infCplText && preg_match('/DOLAR DO FATURAMENTO[:\s]+([\d.,]+)/i', $infCplText, $mPtax)) {
+                        $ptaxFromNF = (float) str_replace(',', '.', $mPtax[1]);
+                        if ($ptaxFromNF > 0) {
+                            $ptaxUsed = $ptaxFromNF;
+                        }
+                    }
+
+                    // 2. Fallback: PTAX BCB do banco/cache
+                    if (!$ptaxUsed) {
+                        $ptaxUsed = $ptaxCache[$nfeDate] ?? null;
+                    }
+
+                    $unitUsd = null;
                     if ($ptaxUsed && $ptaxUsed > 0) {
                         $unitUsd = $unitPrice / $ptaxUsed;
                     }

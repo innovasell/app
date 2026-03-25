@@ -43,6 +43,7 @@ require_once __DIR__ . '/header.php';
             <div class="d-flex gap-2">
                 <button class="btn btn-outline-success" onclick="gerarPDF()"><i class="bi bi-file-earmark-pdf"></i> Gerar PDF</button>
                 <button class="btn btn-outline-primary" onclick="gerarPDFResumo()" title="Resumo agrupado por representante"><i class="bi bi-bar-chart-line"></i> Resumo PDF</button>
+                <button class="btn btn-outline-warning" onclick="reprocessarLote()" title="Recalcula comissões com PTAX e PM corretos"><i class="fas fa-sync-alt"></i> Reprocessar Lote</button>
                 <a href="api/export_commission.php?batch_id=<?= $batch_id ?>" class="btn btn-outline-secondary"><i class="bi bi-download"></i> Exportar CSV</a>
             </div>
         </div>
@@ -129,6 +130,26 @@ require_once __DIR__ . '/header.php';
 
     <!-- Modal de Edição -->
     <div class="modal fade" id="modalEdit" tabindex="-1">
+
+    <!-- Modal Reprocessar Lote -->
+    <div class="modal fade" id="modalReprocessar" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-warning text-dark">
+                    <h5 class="modal-title"><i class="fas fa-sync-alt me-2"></i> Reprocessamento do Lote</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="bodyReprocessar">
+                    <div class="text-center py-4"><div class="spinner-border text-warning"></div><p class="mt-2 text-muted">Recalculando comissões...</p></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                    <button type="button" class="btn btn-primary d-none" id="btnRecarregarAposReproc" onclick="modalReprocessar.hide(); carregarDados(); aplicarFiltros();">Atualizar Tabela</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header bg-primary text-white">
@@ -235,6 +256,100 @@ require_once __DIR__ . '/header.php';
     let itensParaReprocessarGlobais = []; // Armazena os itens para reprocessamento
     const modalEdit = new bootstrap.Modal(document.getElementById('modalEdit'));
     const modalSelectEmb = new bootstrap.Modal(document.getElementById('modalSelectEmb'));
+    const modalReprocessar = new bootstrap.Modal(document.getElementById('modalReprocessar'));
+
+    // === REPROCESSAR LOTE ===
+    async function reprocessarLote() {
+        if (!confirm('Reprocessar TODOS os itens do lote com PTAX corrigida?\n\nEditações manuais (embalagem, preço lista) serão PRESERVADAS.\nItens sem Price List continuarão sem comissão.')) return;
+
+        const body = document.getElementById('bodyReprocessar');
+        const btnAtualizar = document.getElementById('btnRecarregarAposReproc');
+        body.innerHTML = '<div class="text-center py-4"><div class="spinner-border text-warning"></div><p class="mt-2 text-muted">Recalculando comissões e buscando PTAX...</p></div>';
+        btnAtualizar.classList.add('d-none');
+        modalReprocessar.show();
+
+        try {
+            const res  = await fetch('api/reprocessar_lote.php', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ batch_id: BATCH_ID })
+            });
+            const json = await res.json();
+
+            if (!json.success) {
+                body.innerHTML = `<div class="alert alert-danger"><i class="bi bi-x-circle me-2"></i>${json.message}</div>`;
+                return;
+            }
+
+            // ─── Resultado ────────────────────────────────────────────────────
+            const iconTipos = {
+                sem_lista:  { icon: 'bi-question-circle-fill', cor: 'secondary', label: 'Sem Price List' },
+                sem_ptax:   { icon: 'bi-currency-dollar',      cor: 'warning',   label: 'PTAX não encontrada' },
+                sem_pm:     { icon: 'bi-clock-history',        cor: 'info',      label: 'PM = 0 (baseline 28d usado)' },
+                sem_preco:  { icon: 'bi-tag-fill',             cor: 'danger',    label: 'Preço lista zerado' },
+            };
+
+            let html = `
+                <div class="row text-center mb-3">
+                    <div class="col">
+                        <div class="card bg-success text-white py-2">
+                            <div class="fw-bold fs-4">${json.recalculados}</div>
+                            <small>Recalculados</small>
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="card bg-secondary text-white py-2">
+                            <div class="fw-bold fs-4">${json.ignorados_sem_lista}</div>
+                            <small>Ignorados (S/Lista)</small>
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="card bg-warning text-dark py-2">
+                            <div class="fw-bold fs-4">${json.warnings.length}</div>
+                            <small>Warnings</small>
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="card bg-dark text-white py-2">
+                            <div class="fw-bold fs-4">${json.total}</div>
+                            <small>Total</small>
+                        </div>
+                    </div>
+                </div>`;
+
+            if (json.warnings.length > 0) {
+                html += `<hr><h6 class="text-warning"><i class="bi bi-exclamation-triangle-fill me-1"></i> Atenção — Itens que precisam de revisão manual:</h6>`;
+
+                // Agrupa por tipo
+                const grupos = {};
+                json.warnings.forEach(w => {
+                    if (!grupos[w.tipo]) grupos[w.tipo] = [];
+                    grupos[w.tipo].push(w);
+                });
+
+                for (const [tipo, lista] of Object.entries(grupos)) {
+                    const t = iconTipos[tipo] || { icon: 'bi-info-circle', cor: 'secondary', label: tipo };
+                    html += `<div class="alert alert-${t.cor === 'secondary' ? 'secondary' : t.cor} py-2 mb-2">
+                        <strong><i class="bi ${t.icon} me-1"></i> ${t.label} (${lista.length})</strong>
+                        <ul class="mb-0 mt-1" style="font-size:0.82rem">`;
+                    lista.forEach(w => {
+                        html += `<li><code>${w.nfe}</code> — ${w.msg}</li>`;
+                    });
+                    html += `</ul></div>`;
+                }
+            } else {
+                html += `<div class="alert alert-success"><i class="bi bi-check-circle-fill me-2"></i> Todos os itens foram recalculados sem pendências!</div>`;
+            }
+
+            body.innerHTML = html;
+            btnAtualizar.classList.remove('d-none');
+
+        } catch (err) {
+            body.innerHTML = `<div class="alert alert-danger">Erro de comunicação: ${err.message}</div>`;
+        }
+    }
+
+
 
     // Carrega dados ao abrir
     document.addEventListener('DOMContentLoaded', () => carregarDados());
