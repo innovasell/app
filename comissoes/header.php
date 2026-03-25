@@ -13,6 +13,7 @@ $paginaTitulo = [
     'validacao'   => 'Validação de Lotes',
     'lote'        => 'Detalhes do Lote',
     'config_cfop' => 'Configurar CFOPs',
+    'validador'   => 'Validador de Comissão',
 ];
 ?>
 <!DOCTYPE html>
@@ -224,6 +225,12 @@ $paginaTitulo = [
                 <li class="nav-item">
                     <a class="nav-link <?= $pagina_ativa === 'config_cfop' ? 'active' : '' ?>" href="config_cfop.php">
                         <i class="fas fa-sliders-h me-1"></i> CFOPs
+                    </a>
+                </li>
+
+                <li class="nav-item">
+                    <a class="nav-link <?= $pagina_ativa === 'validador' ? 'active' : '' ?>" href="validador_comissao.php">
+                        <i class="fas fa-search-dollar me-1"></i> Validador
                     </a>
                 </li>
 
