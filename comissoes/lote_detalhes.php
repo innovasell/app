@@ -43,6 +43,7 @@ require_once __DIR__ . '/header.php';
             <div class="d-flex gap-2">
                 <button class="btn btn-outline-success" onclick="gerarPDF()"><i class="bi bi-file-earmark-pdf"></i> Gerar PDF</button>
                 <button class="btn btn-outline-primary" onclick="gerarPDFResumo()" title="Resumo agrupado por representante"><i class="bi bi-bar-chart-line"></i> Resumo PDF</button>
+                <button class="btn btn-outline-info" onclick="gerarPDFAuditoria()" title="Etapas de cálculo para auditoria"><i class="fas fa-file-contract"></i> Auditoria PDF</button>
                 <button class="btn btn-outline-warning" onclick="reprocessarLote()" title="Recalcula comissões com PTAX e PM corretos"><i class="fas fa-sync-alt"></i> Reprocessar Lote</button>
                 <a href="api/export_commission.php?batch_id=<?= $batch_id ?>" class="btn btn-outline-secondary"><i class="bi bi-download"></i> Exportar CSV</a>
             </div>
@@ -351,7 +352,242 @@ require_once __DIR__ . '/header.php';
 
 
 
+    // ══════════════════════════════════════════════════════════════════════
+    // PDF AUDITORIA — passo a passo por item para revisão de vendedor
+    // ══════════════════════════════════════════════════════════════════════
+    function gerarPDFAuditoria() {
+        if (!filteredItems || filteredItems.length === 0) {
+            alert('Nenhum item no filtro atual para gerar auditoria.'); return;
+        }
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+        const PW = doc.internal.pageSize.getWidth();
+        const PH = doc.internal.pageSize.getHeight();
+        const ML = 12, MR = 12;
+        const usableW = PW - ML - MR;
+
+        const fmtBRL = v => parseFloat(v||0).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+        const fmtPct = v => (parseFloat(v||0)*100).toFixed(4).replace('.',',') + '%';
+        const fmtN   = (v,d=2) => parseFloat(v||0).toFixed(d).replace('.',',');
+
+        const batchNome   = document.querySelector('h4.text-primary')?.textContent || 'Lote';
+        const selectedRep = Array.from(document.getElementById('filtroRep').selectedOptions)
+            .map(o => o.value).filter(v => v).join(', ') || 'Todos os representantes';
+        const geradoEm = new Date().toLocaleString('pt-BR');
+
+        let y = 14, pageNum = 1;
+
+        function cabecalho(first) {
+            doc.setFillColor(10, 30, 66);
+            doc.rect(0, 0, PW, 10, 'F');
+            doc.setTextColor(255,255,255); doc.setFontSize(7.5);
+            doc.text('RELATÓRIO DE AUDITORIA DE COMISSÕES — INNOVA', ML, 6.5);
+            doc.text(`Pág. ${pageNum}`, PW-MR, 6.5, {align:'right'});
+            doc.setTextColor(0,0,0);
+            if (first) {
+                y = 16;
+                doc.setFontSize(12); doc.setFont('helvetica','bold');
+                doc.text(batchNome, ML, y); y += 5.5;
+                doc.setFontSize(8); doc.setFont('helvetica','normal'); doc.setTextColor(80,80,80);
+                doc.text(`Representante: ${selectedRep}   |   Gerado: ${geradoEm}   |   ${filteredItems.length} item(ns)`, ML, y); y += 4.5;
+                doc.setTextColor(0,0,0);
+                doc.setDrawColor(10,30,66); doc.setLineWidth(0.5); doc.line(ML, y, PW-MR, y); y += 4;
+            } else { y = 14; }
+        }
+
+        function checkY(needed) {
+            if (y + needed > PH - 12) { doc.addPage(); pageNum++; cabecalho(false); }
+        }
+
+        cabecalho(true);
+
+        filteredItems.forEach((item, idx) => {
+            const semLista  = parseInt(item.lista_nao_encontrada||0) === 1;
+            const flagAprov = parseInt(item.flag_aprovacao||0) === 1;
+            const flagTeto  = parseInt(item.flag_teto||0) === 1;
+            const venda_net = parseFloat(item.venda_net||0);
+            const pl_brl    = parseFloat(item.preco_lista_brl||0);
+            const pl_usd    = parseFloat(item.preco_lista_usd||0);
+            const pnu       = parseFloat(item.preco_net_un||0);
+            const dsc_pct   = parseFloat(item.desconto_pct||0);
+            const base_pct  = parseFloat(item.comissao_base_pct||0);
+            const pm_dias   = parseFloat(item.pm_dias||0);
+            const ajuste    = parseFloat(item.ajuste_prazo_pct||0);
+            const final_pct = parseFloat(item.comissao_final_pct||0);
+            const comissao  = parseFloat(item.valor_comissao||0);
+
+            checkY(60);
+
+            // Cabeçalho do item
+            doc.setFillColor(semLista ? 220:flagTeto?255:flagAprov?255:220, semLista?220:flagTeto?193:flagAprov?235:235, semLista?220:flagTeto?7:flagAprov?245:250);
+            doc.rect(ML, y, usableW, 6.5, 'F');
+            doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(10,30,66);
+            doc.text(`#${idx+1}  NF ${item.nfe}   ${item.codigo} ${item.embalagem}`, ML+2, y+4.5);
+            // badge status
+            let badge = semLista ? 'S/Lista' : flagTeto ? '★ Teto' : flagAprov ? '⚠ Aprovação' : '✔ OK';
+            let bclr  = semLista ? [108,117,125] : flagTeto ? [133,77,14] : flagAprov ? [220,53,69] : [25,135,84];
+            const bw  = doc.getTextWidth(badge) + 4;
+            doc.setFillColor(...bclr);
+            doc.roundedRect(PW-MR-bw-1, y+1, bw, 4, 0.8, 0.8, 'F');
+            doc.setFontSize(7); doc.setTextColor(255,255,255);
+            doc.text(badge, PW-MR-bw+1, y+4.3);
+            doc.setTextColor(0,0,0); doc.setFont('helvetica','normal'); y += 7.5;
+
+            // Info linha 1
+            doc.setFontSize(7.5);
+            doc.text(`Produto: ${(item.descricao||'').slice(0,58)}`, ML+1, y); y += 4;
+            doc.text(`Cliente: ${(item.cliente||'—').slice(0,42)}`, ML+1, y);
+            doc.text(`Data: ${item.data_nf||'—'}  |  CFOP: ${item.cfop||'—'}  |  Qtde: ${fmtN(item.qtde,4)} UN`, PW/2, y); y += 3.5;
+            doc.text(`Representante: ${item.representante||'—'}  |  V.Bruto: R$ ${fmtBRL(item.valor_bruto)}  |  ICMS: R$ ${fmtBRL(item.icms)}  |  PIS: R$ ${fmtBRL(item.pis)}  |  COFINS: R$ ${fmtBRL(item.cofins)}`, ML+1, y); y += 4;
+
+            doc.setDrawColor(220,220,220); doc.setLineWidth(0.2); doc.line(ML+1,y,PW-MR-1,y); y += 2.5;
+
+            // Tabela de etapas
+            const etapas = [
+                ['A — Venda Net',        `Bruto R$ ${fmtBRL(item.valor_bruto)} − ICMS − PIS − COFINS`,                                `R$ ${fmtBRL(venda_net)}`],
+                ['B — Preço Net Unit.',   `R$ ${fmtBRL(venda_net)} ÷ ${fmtN(item.qtde,4)} UN`,                                        `R$ ${fmtN(pnu,4)}`],
+                ['C — Price List',        semLista ? 'Não encontrado'
+                                          : pl_usd>0 ? `USD ${fmtN(pl_usd,4)} × PTAX = R$ ${fmtBRL(pl_brl)}`
+                                          : `R$ ${fmtBRL(pl_brl)} (manual)`,                                                          semLista ? '—' : `R$ ${fmtBRL(pl_brl)}`],
+                ['D — Desconto %',        semLista ? '—' : `(R$ ${fmtBRL(pl_brl)} − R$ ${fmtN(pnu,4)}) ÷ R$ ${fmtBRL(pl_brl)}`,     semLista ? '—' : fmtPct(dsc_pct)],
+                ['E — % Base (Matriz)',   matrizLabel(dsc_pct, semLista),                                                              fmtPct(base_pct)],
+                ['F — PM / Ajuste',      `${fmtN(pm_dias,1)} dias (base 28d). Dif ${fmtN(pm_dias-28,1)}d = ${fmtN((pm_dias-28)/7,2)} sem × 0,05%`, fmtPct(ajuste)],
+                ['G — % Final',           `${fmtPct(base_pct)} + (${fmtPct(ajuste)})`,                                                fmtPct(final_pct)],
+                ['H — Comissão Final',    `R$ ${fmtBRL(venda_net)} × ${fmtPct(final_pct)}${flagTeto?' (+teto R$25k)':''}`,            `R$ ${fmtBRL(comissao)}`],
+            ];
+
+            checkY(etapas.length * 4.8 + 6);
+
+            // Cabeçalho colunas
+            doc.setFillColor(230,235,245);
+            doc.rect(ML+1, y, usableW-2, 4.8, 'F');
+            doc.setFont('helvetica','bold'); doc.setFontSize(7); doc.setTextColor(10,30,66);
+            doc.text('Etapa', ML+3, y+3.4);
+            doc.text('Fórmula / Explicação', ML+35, y+3.4);
+            doc.text('Resultado', PW-MR-2, y+3.4, {align:'right'});
+            doc.setFont('helvetica','normal'); doc.setTextColor(0,0,0);
+            y += 4.8;
+
+            etapas.forEach((et, ei) => {
+                checkY(5);
+                if (ei % 2 === 0) { doc.setFillColor(250,251,253); doc.rect(ML+1,y,usableW-2,4.8,'F'); }
+                doc.setFontSize(7.2);
+                doc.setFont('helvetica','bold');   doc.text(et[0], ML+3, y+3.4);
+                doc.setFont('helvetica','normal'); doc.text(String(et[1]).slice(0,73), ML+35, y+3.4);
+                const isTotal = ei === etapas.length-1;
+                if (isTotal) { doc.setFont('helvetica','bold'); doc.setTextColor(25,135,84); }
+                doc.text(et[2], PW-MR-2, y+3.4, {align:'right'});
+                doc.setFont('helvetica','normal'); doc.setTextColor(0,0,0);
+                y += 4.8;
+            });
+
+            // Aviso
+            if (flagAprov || semLista) {
+                checkY(6);
+                doc.setFillColor(255,243,205); doc.rect(ML+1,y,usableW-2,5.5,'F');
+                doc.setFontSize(7); doc.setTextColor(133,77,14);
+                let av = semLista?'Produto não localizado na Price List. ':''
+                       + (dsc_pct>0.20?'Desconto > 20%. ':'')
+                       + (pm_dias>42?'PM > 42 dias. ':'');
+                doc.text('⚠ ' + av.trim(), ML+3, y+3.8);
+                doc.setTextColor(0,0,0); y += 6.5;
+            }
+            if (item.obs?.trim()) {
+                checkY(5); doc.setFontSize(7); doc.setTextColor(100,100,100);
+                doc.text('Obs: ' + item.obs.slice(0,110), ML+1, y+3.5);
+                doc.setTextColor(0,0,0); y += 5;
+            }
+            // Separador
+            doc.setDrawColor(180,180,180); doc.setLineWidth(0.3);
+            doc.line(ML, y+2, PW-MR, y+2); y += 6;
+        });
+
+        // Rodapé total
+        checkY(12);
+        const totalNet = filteredItems.reduce((a,i)=>a+parseFloat(i.venda_net||0),0);
+        const totalCom = filteredItems.reduce((a,i)=>a+parseFloat(i.valor_comissao||0),0);
+        doc.setFillColor(10,30,66); doc.rect(ML, y, usableW, 9, 'F');
+        doc.setTextColor(255,255,255); doc.setFontSize(8.5); doc.setFont('helvetica','bold');
+        doc.text(
+            `TOTAL: ${filteredItems.length} itens  |  Venda Net: R$ ${fmtBRL(totalNet)}  |  Comissão: R$ ${fmtBRL(totalCom)}  |  Média: ${totalNet>0?((totalCom/totalNet)*100).toFixed(4).replace('.',',')+'%':'—'}`,
+            ML+3, y+6
+        );
+        doc.setTextColor(0,0,0);
+
+        const slug = selectedRep.replace(/[^\w]/g,'_').slice(0,20);
+        doc.save(`Auditoria_Comissao_${slug}_${new Date().toISOString().slice(0,10)}.pdf`);
+    }
+
+    function matrizLabel(dsc, semLista) {
+        if (semLista)        return 'S/ Price List → 0%';
+        if (dsc <= 0)        return 'Desc ≤ 0% → 1,00%';
+        if (dsc <= 0.05)     return 'Desc ≤ 5% → 0,90%';
+        if (dsc <= 0.10)     return 'Desc ≤ 10% → 0,70%';
+        if (dsc <= 0.15)     return 'Desc ≤ 15% → 0,50%';
+        if (dsc <= 0.20)     return 'Desc ≤ 20% → 0,40%';
+        return 'Desc > 20% → 0,25% (⚠ Aprovação)';
+    }
+
+    // === REPROCESSAR LOTE ===
+    async function reprocessarLote() {
+        if (!confirm('Reprocessar TODOS os itens do lote com PTAX corrigida?\n\nEdições manuais (embalagem, preço lista) serão PRESERVADAS.\nItens sem Price List continuarão sem comissão.')) return;
+
+        const body = document.getElementById('bodyReprocessar');
+        const btnAtualizar = document.getElementById('btnRecarregarAposReproc');
+        body.innerHTML = '<div class="text-center py-4"><div class="spinner-border text-warning"></div><p class="mt-2 text-muted">Recalculando comissões e buscando PTAX...</p></div>';
+        btnAtualizar.classList.add('d-none');
+        modalReprocessar.show();
+
+        try {
+            const res  = await fetch('api/reprocessar_lote.php', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ batch_id: BATCH_ID })
+            });
+            const json = await res.json();
+
+            if (!json.success) {
+                body.innerHTML = `<div class="alert alert-danger"><i class="bi bi-x-circle me-2"></i>${json.message}</div>`;
+                return;
+            }
+
+            const iconTipos = {
+                sem_lista:  { icon: 'bi-question-circle-fill', cor: 'secondary', label: 'Sem Price List' },
+                sem_ptax:   { icon: 'bi-currency-dollar',      cor: 'warning',   label: 'PTAX não encontrada' },
+                sem_pm:     { icon: 'bi-clock-history',        cor: 'info',      label: 'PM = 0 (baseline 28d usado)' },
+                sem_preco:  { icon: 'bi-tag-fill',             cor: 'danger',    label: 'Preço lista zerado' },
+            };
+
+            let html = `<div class="row text-center mb-3">
+                <div class="col"><div class="card bg-success text-white py-2"><div class="fw-bold fs-4">${json.recalculados}</div><small>Recalculados</small></div></div>
+                <div class="col"><div class="card bg-secondary text-white py-2"><div class="fw-bold fs-4">${json.ignorados_sem_lista}</div><small>Ignorados (S/Lista)</small></div></div>
+                <div class="col"><div class="card bg-warning text-dark py-2"><div class="fw-bold fs-4">${json.warnings.length}</div><small>Warnings</small></div></div>
+                <div class="col"><div class="card bg-dark text-white py-2"><div class="fw-bold fs-4">${json.total}</div><small>Total</small></div></div>
+            </div>`;
+
+            if (json.warnings.length > 0) {
+                html += `<hr><h6 class="text-warning"><i class="bi bi-exclamation-triangle-fill me-1"></i> Itens que precisam de revisão manual:</h6>`;
+                const grupos = {};
+                json.warnings.forEach(w => { if (!grupos[w.tipo]) grupos[w.tipo]=[]; grupos[w.tipo].push(w); });
+                for (const [tipo, lista] of Object.entries(grupos)) {
+                    const t = iconTipos[tipo] || { icon: 'bi-info-circle', cor: 'secondary', label: tipo };
+                    html += `<div class="alert alert-${t.cor} py-2 mb-2"><strong><i class="bi ${t.icon} me-1"></i>${t.label} (${lista.length})</strong><ul class="mb-0 mt-1" style="font-size:0.82rem">`;
+                    lista.forEach(w => { html += `<li><code>${w.nfe}</code> — ${w.msg}</li>`; });
+                    html += `</ul></div>`;
+                }
+            } else {
+                html += `<div class="alert alert-success"><i class="bi bi-check-circle-fill me-2"></i> Todos os itens foram recalculados sem pendências!</div>`;
+            }
+
+            body.innerHTML = html;
+            btnAtualizar.classList.remove('d-none');
+        } catch (err) {
+            body.innerHTML = `<div class="alert alert-danger">Erro de comunicação: ${err.message}</div>`;
+        }
+    }
+
     // Carrega dados ao abrir
+
     document.addEventListener('DOMContentLoaded', () => carregarDados());
 
     async function carregarDados() {
