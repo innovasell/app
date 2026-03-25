@@ -42,6 +42,7 @@ require_once __DIR__ . '/header.php';
             </div>
             <div class="d-flex gap-2">
                 <button class="btn btn-outline-success" onclick="gerarPDF()"><i class="bi bi-file-earmark-pdf"></i> Gerar PDF</button>
+                <button class="btn btn-outline-primary" onclick="gerarPDFResumo()" title="Resumo agrupado por representante"><i class="bi bi-bar-chart-line"></i> Resumo PDF</button>
                 <a href="api/export_commission.php?batch_id=<?= $batch_id ?>" class="btn btn-outline-secondary"><i class="bi bi-download"></i> Exportar CSV</a>
             </div>
         </div>
@@ -735,6 +736,90 @@ require_once __DIR__ . '/header.php';
         doc.text(`Total de itens: ${itensDivergentesGlobais.length}`, 14, doc.lastAutoTable.finalY + 5);
 
         doc.save(`divergencias_lote_${BATCH_ID}.pdf`);
+    }
+
+    // === RESUMO POR REPRESENTANTE ===
+    function gerarPDFResumo() {
+        if (!filteredItems || filteredItems.length === 0) {
+            alert('Nenhum item para resumir. Aplique os filtros antes de gerar.');
+            return;
+        }
+
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+
+        const batchNome = document.querySelector('h4.text-primary').textContent;
+        doc.setFontSize(14);
+        doc.text('Resumo de Comissões por Representante', 14, 14);
+        doc.setFontSize(10);
+        doc.text(batchNome, 14, 21);
+        doc.setFontSize(8);
+        doc.text('Gerado em: ' + new Date().toLocaleString('pt-BR'), 14, 27);
+
+        // Agrupa por representante
+        const grupos = {};
+        filteredItems.forEach(item => {
+            const rep = item.representante || '(sem nome)';
+            if (!grupos[rep]) {
+                grupos[rep] = { nfs: new Set(), vendas: 0, comissoes: 0, pm_soma: 0, pm_cnt: 0, pct_soma: 0, pct_cnt: 0 };
+            }
+            const g = grupos[rep];
+            if (item.nfe) g.nfs.add(item.nfe);
+            g.vendas     += parseFloat(item.venda_net      || 0);
+            g.comissoes  += parseFloat(item.valor_comissao || 0);
+            const pm = parseFloat(item.pm_dias || 0);
+            if (pm > 0) { g.pm_soma += pm; g.pm_cnt++; }
+            const pct = parseFloat(item.comissao_final_pct || 0);
+            if (pct > 0) { g.pct_soma += pct; g.pct_cnt++; }
+        });
+
+        const fmtBRL = v => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        const fmtPct = v => (v * 100).toFixed(2) + '%';
+
+        const linhas = Object.entries(grupos)
+            .sort((a, b) => a[0].localeCompare(b[0]))
+            .map(([rep, g]) => [
+                rep,
+                g.nfs.size,
+                fmtBRL(g.vendas),
+                fmtBRL(g.comissoes),
+                g.pm_cnt  > 0 ? (g.pm_soma  / g.pm_cnt).toFixed(1)  + 'd' : '-',
+                g.pct_cnt > 0 ? fmtPct(g.pct_soma / g.pct_cnt)            : '-'
+            ]);
+
+        // Linha de totais
+        const totVendas = filteredItems.reduce((s, i) => s + parseFloat(i.venda_net      || 0), 0);
+        const totCom    = filteredItems.reduce((s, i) => s + parseFloat(i.valor_comissao || 0), 0);
+        const allNfs    = new Set(filteredItems.map(i => i.nfe).filter(Boolean));
+        const pmVals    = filteredItems.map(i => parseFloat(i.pm_dias || 0)).filter(v => v > 0);
+        const pctVals   = filteredItems.map(i => parseFloat(i.comissao_final_pct || 0)).filter(v => v > 0);
+        const pmMedio   = pmVals.length  ? (pmVals.reduce((a,b)=>a+b,0)  / pmVals.length).toFixed(1)  + 'd' : '-';
+        const pctMedio  = pctVals.length ? fmtPct(pctVals.reduce((a,b)=>a+b,0) / pctVals.length)          : '-';
+
+        doc.autoTable({
+            startY: 32,
+            head: [['Representante', 'Total NFs', 'Total Vendas', 'Total Comissões', 'PM Médio', '% Comissão Média']],
+            body: linhas,
+            foot: [['TOTAL GERAL', allNfs.size, fmtBRL(totVendas), fmtBRL(totCom), pmMedio, pctMedio]],
+            styles:     { fontSize: 9, cellPadding: 2.5, valign: 'middle' },
+            headStyles: { fillColor: [13, 110, 253], fontStyle: 'bold' },
+            footStyles: { fillColor: [30, 30, 30], textColor: [255, 255, 255], fontStyle: 'bold' },
+            alternateRowStyles: { fillColor: [240, 245, 255] },
+            columnStyles: {
+                0: { cellWidth: 'auto' },
+                1: { halign: 'center' },
+                2: { halign: 'right' },
+                3: { halign: 'right' },
+                4: { halign: 'center' },
+                5: { halign: 'center' }
+            }
+        });
+
+        const filtroAtivo = document.querySelector('input[name=filtroStatus]:checked').value;
+        doc.setFontSize(7);
+        doc.text(`Filtro: ${filtroAtivo} | ${filteredItems.length} itens | ${Object.keys(grupos).length} representantes`, 14, doc.lastAutoTable.finalY + 5);
+
+        doc.save(`resumo_comissoes_lote_${BATCH_ID}.pdf`);
     }
 
     </script>
