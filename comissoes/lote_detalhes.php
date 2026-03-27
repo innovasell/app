@@ -259,18 +259,42 @@ require_once __DIR__ . '/header.php';
     const modalSelectEmb = new bootstrap.Modal(document.getElementById('modalSelectEmb'));
     const modalReprocessar = new bootstrap.Modal(document.getElementById('modalReprocessar'));
 
-    // Remove diacríticos para compatibilidade com fontes padrão do jsPDF (Helvetica não suporta UTF-8)
+    // Normaliza texto para jsPDF: mantém acentos do Latin-1 (NFC preserva é/ã/ç/ú)
+    // Helvetica suporta WinAnsi (U+0020-U+00FF) — inclui todos os caracteres do PT-BR
     function fixText(str) {
-        return (str || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        if (!str) return '';
+        return str.normalize('NFC')             // precompõe acentos (ú → U+00FA, etc.)
+            .replace(/\u2014|\u2015/g, '--')    // travessão
+            .replace(/\u2013/g, '-')            // meia-risca
+            .replace(/[\u201C\u201D\u00AB\u00BB]/g, '"') // aspas curvas
+            .replace(/[\u2018\u2019]/g, "'")    // apóstrofos curvos
+            .replace(/\u2026/g, '...')          // reticências
+            .replace(/[^\x00-\xFF]/g, '');      // remove tudo fora do Latin-1
     }
 
     // ══════════════════════════════════════════════════════════════════════
     // PDF AUDITORIA — 10 etapas detalhadas por item (POP 10/2025 Rev.01)
     // ══════════════════════════════════════════════════════════════════════
-    function gerarPDFAuditoria() {
+    async function gerarPDFAuditoria() {
         if (!filteredItems || filteredItems.length === 0) {
             alert('Nenhum item no filtro atual para gerar auditoria.'); return;
         }
+
+        // Pré-carrega logotipo como base64 para incorporar no PDF
+        let logoData = null;
+        try {
+            const logoImg = await new Promise(function(resolve, reject) {
+                const img = new Image();
+                img.onload = function() { resolve(img); };
+                img.onerror = function() { reject(); };
+                img.src = '../sistema-cotacoes/assets/LOGO.png';
+            });
+            const cv = document.createElement('canvas');
+            cv.width = logoImg.naturalWidth || 220; cv.height = logoImg.naturalHeight || 60;
+            cv.getContext('2d').drawImage(logoImg, 0, 0);
+            logoData = cv.toDataURL('image/png');
+        } catch(e) { logoData = null; }
+
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
         const PW = doc.internal.pageSize.getWidth();
@@ -290,21 +314,29 @@ require_once __DIR__ . '/header.php';
         let y = 14, pageNum = 1;
 
         function cabecalho(first) {
-            doc.setFillColor(10,30,66);
-            doc.rect(0, 0, PW, 10, 'F');
-            doc.setTextColor(255,255,255); doc.setFontSize(7.5); doc.setFont('helvetica','normal');
-            doc.text('RELATORIO DE AUDITORIA DE COMISSOES - INNOVA  |  POP 10/2025 Rev.01', ML, 6.5);
-            doc.text('Pag. ' + pageNum, PW-MR, 6.5, {align:'right'});
+            // Faixa roxa InnovaSell
+            doc.setFillColor(107,33,168);
+            doc.rect(0, 0, PW, 11, 'F');
+            // Faixa verde abaixo
+            doc.setFillColor(64,136,60);
+            doc.rect(0, 11, PW, 3.5, 'F');
+            doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(7.5);
+            doc.text('RELATORIO DE AUDITORIA DE COMISSOES', ML, 6.8);
+            doc.setFont('helvetica','normal'); doc.setFontSize(6.5);
+            doc.text('POP 10/2025 Rev.01  |  InnovaSell', ML, 10.5);
+            doc.text('Pag. ' + pageNum, PW-MR, 7, {align:'right'});
+            if (logoData) { doc.addImage(logoData, 'PNG', PW-MR-38, 0.5, 36, 10); }
             doc.setTextColor(0,0,0);
             if (first) {
-                y = 16;
-                doc.setFontSize(13); doc.setFont('helvetica','bold');
+                y = 21;
+                doc.setFontSize(13); doc.setFont('helvetica','bold'); doc.setTextColor(107,33,168);
                 doc.text(batchNome, ML, y); y += 6;
                 doc.setFontSize(8); doc.setFont('helvetica','normal'); doc.setTextColor(80,80,80);
                 doc.text('Representante: ' + selectedRep + '   |   Gerado em: ' + geradoEm + '   |   ' + filteredItems.length + ' item(ns)', ML, y); y += 5;
                 doc.setTextColor(0,0,0);
-                doc.setDrawColor(10,30,66); doc.setLineWidth(0.5); doc.line(ML, y, PW-MR, y); y += 5;
-            } else { y = 14; }
+                doc.setDrawColor(107,33,168); doc.setLineWidth(0.8); doc.line(ML, y, PW-MR, y);
+                doc.setDrawColor(64,136,60);  doc.setLineWidth(0.3); doc.line(ML, y+1, PW-MR, y+1); y += 6;
+            } else { y = 17; }
         }
 
         function checkY(needed) {
@@ -337,26 +369,26 @@ require_once __DIR__ . '/header.php';
             doc.setFont('helvetica','normal'); doc.setTextColor(40,40,40);
         }
 
-        // Par label: valor com valor em negrito azul
+        // Par label: valor com valor em negrito roxo
         function kv(label, valor, indent) {
             indent = indent || 0;
             checkY(4.8);
             doc.setFont('helvetica','normal'); doc.setFontSize(7.2); doc.setTextColor(80,80,80);
             doc.text(label, ML+3+indent, y+3.2);
-            doc.setFont('helvetica','bold'); doc.setTextColor(10,30,100);
+            doc.setFont('helvetica','bold'); doc.setTextColor(107,33,168);
             doc.text(valor, ML+90+indent, y+3.2);
             doc.setFont('helvetica','normal'); doc.setTextColor(40,40,40);
             y += 4.4;
         }
 
-        // Linha de formula com fundo azul claro
+        // Linha de fórmula com fundo roxo claro
         function formula(texto, indent) {
             indent = indent || 0;
-            doc.setFont('helvetica','bold'); doc.setFontSize(7.2); doc.setTextColor(10,30,66);
+            doc.setFont('helvetica','bold'); doc.setFontSize(7.2); doc.setTextColor(107,33,168);
             const lines = doc.splitTextToSize(texto, usableW - 8 - indent);
             const totalH = lines.length * 4.4 + 1.5;
             checkY(totalH + 1);
-            doc.setFillColor(240,245,255);
+            doc.setFillColor(248,242,255);
             doc.rect(ML+2+indent, y, usableW-4-indent, totalH, 'F');
             lines.forEach(function(l, li) {
                 doc.text(l, ML+4+indent, y + 3.4 + li * 4.4);
@@ -409,13 +441,13 @@ require_once __DIR__ . '/header.php';
             const comissaoPreTeto = semLista ? 0 : venda_net * final_pct;
             const pmDif           = pm_dias - 28;
 
-            // ── Cabecalho do item ──────────────────────────────────────────────────
+            // ── Cabeçalho do item ──────────────────────────────────────────────────
             checkY(24);
-            doc.setFillColor(10,30,66);
+            doc.setFillColor(107,33,168);
             doc.rect(ML, y, usableW, 7.5, 'F');
             doc.setFont('helvetica','bold'); doc.setFontSize(9.5); doc.setTextColor(255,255,255);
             doc.text('ITEM #' + (idx+1) + '  |  NF ' + (item.nfe||'--') + '   ' + fixText(item.codigo||'') + ' ' + fixText(item.embalagem||''), ML+3, y+5.2);
-            let badge = semLista ? 'S/Lista' : flagTeto ? 'Teto Atingido' : flagAprov ? 'Requer Aprovacao' : 'Comissao OK';
+            let badge = semLista ? 'S/Lista' : flagTeto ? 'Teto Atingido' : flagAprov ? 'Requer Aprovação' : 'Comissão OK';
             let bclr  = semLista ? [108,117,125] : flagTeto ? [200,100,0] : flagAprov ? [180,40,40] : [25,135,84];
             const bw  = doc.getTextWidth(badge) + 5;
             doc.setFillColor(...bclr);
@@ -431,34 +463,34 @@ require_once __DIR__ . '/header.php';
             doc.text(fixText('Representante: ' + (item.representante||'--').slice(0,38)), ML+2, y+3.2);
             doc.text('Qtde: ' + fmtN(qtde,4) + ' UN', PW*0.56, y+3.2); y += 5;
             doc.setTextColor(40,40,40);
-            doc.setDrawColor(10,30,66); doc.setLineWidth(0.4); doc.line(ML, y, PW-MR, y); y += 4;
+            doc.setDrawColor(107,33,168); doc.setLineWidth(0.4); doc.line(ML, y, PW-MR, y); y += 4;
 
             // ══════════════════════════════════════════════════
             // ETAPA 1 — Identificacao
             // ══════════════════════════════════════════════════
-            etapaHeader(1, 'Identificacao do Documento Fiscal', 41, 128, 185);
-            txt('Antes de qualquer calculo, identificamos a nota fiscal que sera analisada. O numero da NF e a data de emissao sao fundamentais: a data sera usada na Etapa 5 para buscar a cotacao do dolar (PTAX) do Banco Central vigente naquele dia, pois os precos do catalogo de produtos sao em USD.');
+            etapaHeader(1, 'Identificação do Documento Fiscal', 107, 33, 168);
+            txt('Antes de qualquer cálculo, identificamos a nota fiscal que será analisada. O número da NF e a data de emissão são fundamentais: a data será usada na Etapa 5 para buscar a cotação do dólar (PTAX) do Banco Central vigente naquele dia, pois os preços do catálogo de produtos são em USD.');
             spacer(1);
-            kv('Numero da Nota Fiscal:', 'NF ' + (item.nfe||'--'));
-            kv('Data de Emissao:', item.data_nf||'--');
-            kv('CFOP (Natureza da Operacao):', item.cfop||'--');
-            kv('Produto (Codigo / Embalagem):', fixText((item.codigo||'--') + ' / ' + (item.embalagem||'--')));
+            kv('Número da Nota Fiscal:', 'NF ' + (item.nfe||'--'));
+            kv('Data de Emissão:', item.data_nf||'--');
+            kv('CFOP (Natureza da Operação):', item.cfop||'--');
+            kv('Produto (Código / Embalagem):', fixText((item.codigo||'--') + ' / ' + (item.embalagem||'--')));
             kv('Quantidade faturada:', fmtN(qtde,4) + ' unidades');
             spacer(3);
 
             // ══════════════════════════════════════════════════
             // ETAPA 2 — Elegibilidade
             // ══════════════════════════════════════════════════
-            etapaHeader(2, 'Elegibilidade do Representante', 41, 128, 185);
-            txt('Conforme o POP 10/2025, somente representantes cadastrados como "Gerente de Contas" tem direito a comissao sobre vendas de produtos da linha de cotacoes. Representantes em outros cargos (ex.: estagiario, suporte) nao sao elegiveis. A verificacao e feita cruzando o codigo do vendedor na NF-e com o cadastro interno de representantes comerciais no momento da importacao do lote.');
+            etapaHeader(2, 'Elegibilidade do Representante', 107, 33, 168);
+            txt('Conforme o POP 10/2025, somente representantes cadastrados como "Gerente de Contas" têm direito à comissão sobre vendas de produtos da linha de cotações. Representantes em outros cargos (ex.: estagiário, suporte) não são elegíveis. A verificação é feita cruzando o código do vendedor na NF-e com o cadastro interno de representantes comerciais no momento da importação do lote.');
             spacer(1);
             kv('Representante identificado:', fixText(item.representante||'--'));
             kv('Cliente atendido:', fixText((item.cliente||'--').slice(0,45)));
             checkY(5.5);
             doc.setFillColor(232,246,239);
             doc.rect(ML+2, y, usableW-4, 5, 'F');
-            doc.setFont('helvetica','italic'); doc.setFontSize(7.2); doc.setTextColor(25,135,84);
-            doc.text('Elegibilidade confirmada durante a importacao do lote.', ML+5, y+3.4);
+            doc.setFont('helvetica','italic'); doc.setFontSize(7.2); doc.setTextColor(64,136,60);
+            doc.text('Elegibilidade confirmada durante a importação do lote.', ML+5, y+3.4);
             doc.setFont('helvetica','normal'); doc.setTextColor(40,40,40);
             y += 6.5;
             spacer(3);
@@ -466,16 +498,16 @@ require_once __DIR__ . '/header.php';
             // ══════════════════════════════════════════════════
             // ETAPA 3 — Dados Fiscais
             // ══════════════════════════════════════════════════
-            etapaHeader(3, 'Extracao dos Dados Fiscais da NF-e', 41, 128, 185);
-            txt('A Nota Fiscal Eletronica (NF-e) contem varios componentes de valor. Para calcular a base de comissao corretamente, precisamos separar cada componente. Pense assim: o valor bruto e o total que o cliente pagou, mas uma parte ja esta comprometida com impostos e custos que a empresa repassa — esse dinheiro nao pertence a empresa e nao pode ser base de comissao.');
+            etapaHeader(3, 'Extração dos Dados Fiscais da NF-e', 107, 33, 168);
+            txt('A Nota Fiscal Eletrônica (NF-e) contém vários componentes de valor. Para calcular a base de comissão corretamente, precisamos separar cada componente. Pense assim: o valor bruto é o total que o cliente pagou, mas uma parte já está comprometida com impostos e custos que a empresa repassa — esse dinheiro não pertence à empresa e não pode ser base de comissão.');
             spacer(1);
 
             const comps = [
-                ['(+) Valor Bruto da Mercadoria', 'R$ ' + fmtBRL(valorBruto), 'Total faturado antes de qualquer deducao (campo vProd da NF-e).'],
-                ['(-) ICMS', 'R$ ' + fmtBRL(icms), 'Imposto Estadual sobre Circulacao de Mercadorias: vai para o governo estadual.'],
-                ['(-) PIS', 'R$ ' + fmtBRL(pis), 'Programa de Integracao Social: contribuicao federal obrigatoria.'],
-                ['(-) COFINS', 'R$ ' + fmtBRL(cofins), 'Contribuicao para o Financiamento da Seguridade Social: outra contribuicao federal.'],
-                ['(-) Outras Deducoes (frete, etc.)', 'R$ ' + fmtBRL(outrasDeducoes), 'Frete destacado na NF e outras deducoes eventuais.'],
+                ['(+) Valor Bruto da Mercadoria', 'R$ ' + fmtBRL(valorBruto), 'Total faturado antes de qualquer dedução (campo vProd da NF-e).'],
+                ['(-) ICMS', 'R$ ' + fmtBRL(icms), 'Imposto Estadual sobre Circulação de Mercadorias: vai para o governo estadual.'],
+                ['(-) PIS', 'R$ ' + fmtBRL(pis), 'Programa de Integração Social: contribuição federal obrigatória.'],
+                ['(-) COFINS', 'R$ ' + fmtBRL(cofins), 'Contribuição para o Financiamento da Seguridade Social: outra contribuição federal.'],
+                ['(-) Outras Deduções (frete, etc.)', 'R$ ' + fmtBRL(outrasDeducoes), 'Frete destacado na NF e outras deduções eventuais.'],
             ];
             comps.forEach(function(c, ci) {
                 checkY(10);
@@ -484,7 +516,7 @@ require_once __DIR__ . '/header.php';
                 doc.setFont('helvetica','bold'); doc.setFontSize(7.2);
                 doc.setTextColor(ci===0 ? 10 : 150, ci===0 ? 80 : 0, ci===0 ? 100 : 0);
                 doc.text(c[0], ML+4, y+3.4);
-                doc.setTextColor(10,30,66);
+                doc.setTextColor(107,33,168);
                 doc.text(c[1], PW-MR-4, y+3.4, {align:'right'});
                 doc.setFont('helvetica','italic'); doc.setFontSize(6.5); doc.setTextColor(110,110,110);
                 doc.text(c[2], ML+5, y+7.4);
@@ -496,82 +528,82 @@ require_once __DIR__ . '/header.php';
             // ══════════════════════════════════════════════════
             // ETAPA 4 — Venda Net
             // ══════════════════════════════════════════════════
-            etapaHeader(4, 'Calculo da Venda Net (Base de Comissao)', 39, 174, 96);
-            txt('A Venda Net e a receita verdadeiramente liquida: o que sobra para a empresa depois de pagar todos os impostos e deducoes da nota. E SOMENTE sobre esse valor que a comissao sera calculada — nunca sobre o valor bruto. Isso e justo porque a empresa so pode remunerar o representante pelo que realmente fica no caixa.');
+            etapaHeader(4, 'Cálculo da Venda Net (Base de Comissão)', 64, 136, 60);
+            txt('A Venda Net é a receita verdadeiramente líquida: o que sobra para a empresa depois de pagar todos os impostos e deduções da nota. É SOMENTE sobre esse valor que a comissão será calculada — nunca sobre o valor bruto. Isso é justo porque a empresa só pode remunerar o representante pelo que realmente fica no caixa.');
             spacer(1);
-            formula('Venda Net = Valor Bruto - ICMS - PIS - COFINS - Outras Deducoes');
+            formula('Venda Net = Valor Bruto - ICMS - PIS - COFINS - Outras Deduções');
             formula('Venda Net = R$ ' + fmtBRL(valorBruto) + ' - R$ ' + fmtBRL(icms) + ' - R$ ' + fmtBRL(pis) + ' - R$ ' + fmtBRL(cofins) + ' - R$ ' + fmtBRL(outrasDeducoes));
             spacer(1);
-            resultado('Venda Net (Base de Comissao):', 'R$ ' + fmtBRL(venda_net), 232,246,239, 10,100,50);
+            resultado('Venda Net (Base de Comissão):', 'R$ ' + fmtBRL(venda_net), 232,246,239, 10,100,50);
             if (valorBruto > 0) {
                 const pctNet = (venda_net / valorBruto * 100).toFixed(1).replace('.',',');
-                txt('Interpretacao: De cada R$ 100,00 de valor bruto nesta NF, R$ ' + pctNet + ' e receita liquida. O restante (R$ ' + fmtBRL(valorBruto - venda_net) + ') sao impostos e deducoes repassados a terceiros.', 0, false, 90,90,90);
+                txt('Interpretação: De cada R$ 100,00 de valor bruto nesta NF, R$ ' + pctNet + ' é receita líquida. O restante (R$ ' + fmtBRL(valorBruto - venda_net) + ') são impostos e deduções repassados a terceiros.', 0, false, 90,90,90);
             }
             spacer(3);
 
             // ══════════════════════════════════════════════════
             // ETAPA 5 — Price List, Preco Net Un e Desconto
             // ══════════════════════════════════════════════════
-            etapaHeader(5, 'Price List, Preco Net Unitario e Desconto', 142, 68, 173);
-            txt('Quanto maior o desconto que o representante concedeu ao cliente, menor sera sua comissao. Esse mecanismo incentiva vendas pelo preco cheio de tabela. A logica e simples: quem vende mais barato ganha menos comissao; quem vende pelo preco de catalogo ganha mais.');
+            etapaHeader(5, 'Price List, Preço Net Unitário e Desconto', 107, 33, 168);
+            txt('Quanto maior o desconto que o representante concedeu ao cliente, menor será sua comissão. Esse mecanismo incentiva vendas pelo preço cheio de tabela. A lógica é simples: quem vende mais barato ganha menos comissão; quem vende pelo preço de catálogo ganha mais.');
             spacer(2);
 
             // 5a — Preco Net Unitario
-            txt('5a)  Preco Net Unitario — quanto cada unidade foi vendida (liquida de impostos):', 0, true, 80,40,120);
-            txt('Dividimos a Venda Net pela quantidade para encontrar o preco real de cada unidade, descontados os impostos. Esse numero sera comparado com o preco de tabela (Price List) para calcular o desconto.');
+            txt('5a)  Preço Net Unitário — quanto cada unidade foi vendida (líquida de impostos):', 0, true, 80,40,120);
+            txt('Dividimos a Venda Net pela quantidade para encontrar o preço real de cada unidade, descontados os impostos. Esse número será comparado com o preço de tabela (Price List) para calcular o desconto.');
             spacer(1);
-            formula('Preco Net Unitario = Venda Net / Quantidade');
-            formula('Preco Net Unitario = R$ ' + fmtBRL(venda_net) + ' / ' + fmtN(qtde,4) + ' UN = R$ ' + fmtN(pnu,4));
+            formula('Preço Net Unitário = Venda Net / Quantidade');
+            formula('Preço Net Unitário = R$ ' + fmtBRL(venda_net) + ' / ' + fmtN(qtde,4) + ' UN = R$ ' + fmtN(pnu,4));
             spacer(2);
 
             // 5b — Price List
-            txt('5b)  Preco de Tabela (Price List) — preco oficial do catalogo sem nenhum desconto:', 0, true, 80,40,120);
+            txt('5b)  Preço de Tabela (Price List) — preço oficial do catálogo sem nenhum desconto:', 0, true, 80,40,120);
             if (semLista) {
                 checkY(7);
                 doc.setFillColor(255,243,205);
                 doc.rect(ML+2, y, usableW-4, 6, 'F');
                 doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(133,77,14);
-                doc.text('ATENCAO: Produto nao localizado na Price List. Comissao = R$ 0,00.', ML+5, y+4);
+                doc.text('ATENÇÃO: Produto não localizado na Price List. Comissão = R$ 0,00.', ML+5, y+4);
                 doc.setFont('helvetica','normal'); doc.setTextColor(40,40,40); y += 7.5;
-                txt('Este produto nao foi encontrado no catalogo de precos vigente durante a importacao do lote. Sem um preco de referencia para comparar, nao e possivel calcular o desconto nem a comissao. Para corrigir, acesse a pagina de Diagnostico S/Lista, associe o produto manualmente a uma embalagem e reprocesse o lote.', 0, false, 133,77,14);
+                txt('Este produto não foi encontrado no catálogo de preços vigente durante a importação do lote. Sem um preço de referência para comparar, não é possível calcular o desconto nem a comissão. Para corrigir, acesse a página de Diagnóstico S/Lista, associe o produto manualmente a uma embalagem e reprocesse o lote.', 0, false, 133,77,14);
             } else if (pl_usd > 0) {
                 const ptaxCalc = pl_brl / pl_usd;
-                txt('O preco de catalogo e em dolares americanos (USD). Para converter para reais, usamos a PTAX do Banco Central do Brasil (BCB) do dia da emissao da NF. A PTAX e a taxa de cambio oficial do dolar divulgada pelo BCB ao final de cada dia util — ela e a referencia oficial para conversoes comerciais no Brasil.');
+                txt('O preço de catálogo é em dólares americanos (USD). Para converter para reais, usamos a PTAX do Banco Central do Brasil (BCB) do dia da emissão da NF. A PTAX é a taxa de câmbio oficial do dólar divulgada pelo BCB ao final de cada dia útil — ela é a referência oficial para conversões comerciais no Brasil.');
                 spacer(1);
-                formula('Preco Lista BRL = Preco Lista USD x PTAX do dia da NF');
-                formula('Preco Lista BRL = USD ' + fmtN(pl_usd,4) + ' x R$ ' + fmtN(ptaxCalc,4) + ' (PTAX de ' + (item.data_nf||'--') + ') = R$ ' + fmtBRL(pl_brl));
+                formula('Preço Lista BRL = Preço Lista USD x PTAX do dia da NF');
+                formula('Preço Lista BRL = USD ' + fmtN(pl_usd,4) + ' x R$ ' + fmtN(ptaxCalc,4) + ' (PTAX de ' + (item.data_nf||'--') + ') = R$ ' + fmtBRL(pl_brl));
             } else {
-                txt('O preco de tabela foi informado manualmente em reais (BRL), sem conversao de dolar. Isso ocorre quando o produto nao possui preco em USD no catalogo ou quando o preco foi ajustado diretamente via edicao manual do item.');
-                formula('Preco Lista BRL (manual) = R$ ' + fmtBRL(pl_brl));
+                txt('O preço de tabela foi informado manualmente em reais (BRL), sem conversão de dólar. Isso ocorre quando o produto não possui preço em USD no catálogo ou quando o preço foi ajustado diretamente via edição manual do item.');
+                formula('Preço Lista BRL (manual) = R$ ' + fmtBRL(pl_brl));
             }
             spacer(2);
 
             if (!semLista) {
                 // 5c — Desconto
-                txt('5c)  Calculo do Desconto:', 0, true, 80,40,120);
-                txt('Pense assim: se o preco de tabela e R$ 100 e o representante vendeu por R$ 80 (liquido de impostos), ele concedeu 20% de desconto ao cliente. Calculamos esse percentual para saber em qual faixa da tabela de comissao o item se enquadra.');
+                txt('5c)  Cálculo do Desconto:', 0, true, 80,40,120);
+                txt('Pense assim: se o preço de tabela é R$ 100 e o representante vendeu por R$ 80 (líquido de impostos), ele concedeu 20% de desconto ao cliente. Calculamos esse percentual para saber em qual faixa da tabela de comissão o item se enquadra.');
                 spacer(1);
-                formula('Desconto % = (Preco Lista - Preco Net Un) / Preco Lista x 100');
+                formula('Desconto % = (Preço Lista - Preço Net Un) / Preço Lista x 100');
                 formula('Desconto % = (R$ ' + fmtBRL(pl_brl) + ' - R$ ' + fmtN(pnu,4) + ') / R$ ' + fmtBRL(pl_brl) + ' x 100 = ' + fmtPct(dsc_pct,2));
                 spacer(2);
 
                 // 5d — Tabela/Matriz
-                txt('5d)  Tabela de Comissao (Matriz) — a faixa de desconto determina o % base:', 0, true, 80,40,120);
-                txt('A empresa estabelece seis faixas de desconto. Cada faixa tem um percentual base de comissao correspondente. Quanto menor o desconto dado, maior a comissao — isso recompensa quem vende pelo preco cheio. A linha destacada em azul e a faixa que se aplica a este item:');
+                txt('5d)  Tabela de Comissão (Matriz) — a faixa de desconto determina o % base:', 0, true, 80,40,120);
+                txt('A empresa estabelece seis faixas de desconto. Cada faixa tem um percentual base de comissão correspondente. Quanto menor o desconto dado, maior a comissão — isso recompensa quem vende pelo preço cheio. A linha destacada é a faixa que se aplica a este item:');
                 spacer(1);
 
                 const faixas = [
-                    ['Sem desconto (0,00%)', '1,00% de comissao base', dsc_pct <= 0],
-                    ['Desconto de 0,01% ate 5,00%', '0,90% de comissao base', dsc_pct > 0 && dsc_pct <= 0.05],
-                    ['Desconto de 5,01% ate 10,00%', '0,70% de comissao base', dsc_pct > 0.05 && dsc_pct <= 0.10],
-                    ['Desconto de 10,01% ate 15,00%', '0,50% de comissao base', dsc_pct > 0.10 && dsc_pct <= 0.15],
-                    ['Desconto de 15,01% ate 20,00%', '0,40% de comissao base', dsc_pct > 0.15 && dsc_pct <= 0.20],
-                    ['Desconto acima de 20,00%  [REQUER APROVACAO]', '0,25% de comissao base', dsc_pct > 0.20],
+                    ['Sem desconto (0,00%)', '1,00% de comissão base', dsc_pct <= 0],
+                    ['Desconto de 0,01% até 5,00%', '0,90% de comissão base', dsc_pct > 0 && dsc_pct <= 0.05],
+                    ['Desconto de 5,01% até 10,00%', '0,70% de comissão base', dsc_pct > 0.05 && dsc_pct <= 0.10],
+                    ['Desconto de 10,01% até 15,00%', '0,50% de comissão base', dsc_pct > 0.10 && dsc_pct <= 0.15],
+                    ['Desconto de 15,01% até 20,00%', '0,40% de comissão base', dsc_pct > 0.15 && dsc_pct <= 0.20],
+                    ['Desconto acima de 20,00%  [REQUER APROVAÇÃO]', '0,25% de comissão base', dsc_pct > 0.20],
                 ];
                 faixas.forEach(function(f, fi) {
                     checkY(5.5);
                     if (f[2]) {
-                        doc.setFillColor(10,30,66);
+                        doc.setFillColor(107,33,168);
                         doc.rect(ML+2, y, usableW-4, 5, 'F');
                         doc.setFont('helvetica','bold'); doc.setFontSize(7.2); doc.setTextColor(255,255,255);
                         doc.text(f[0], ML+5, y+3.3);
@@ -587,37 +619,37 @@ require_once __DIR__ . '/header.php';
                     y += 5;
                 });
                 spacer(1);
-                resultado('% Base de Comissao (saida da Etapa 5):', fmtPct(base_pct,2), 232,246,239, 10,100,50);
+                resultado('% Base de Comissão (saída da Etapa 5):', fmtPct(base_pct,2), 232,246,239, 10,100,50);
             }
             spacer(3);
 
             // ══════════════════════════════════════════════════
             // ETAPA 6 — Prazo Medio
             // ══════════════════════════════════════════════════
-            etapaHeader(6, 'Prazo Medio de Pagamento (PM)', 230,126,34);
-            txt('O Prazo Medio (PM) representa, em media, quantos dias o cliente leva para pagar as duplicatas desta venda. Por que isso importa para a comissao? Porque quanto mais tempo o cliente demora para pagar, maior o custo financeiro para a empresa (o dinheiro fica parado mais tempo, podendo render juros em outras aplicacoes). Para compensar isso, a comissao e ajustada em funcao do prazo.');
+            etapaHeader(6, 'Prazo Médio de Pagamento (PM)', 64,136,60);
+            txt('O Prazo Médio (PM) representa, em média, quantos dias o cliente leva para pagar as duplicatas desta venda. Por que isso importa para a comissão? Porque quanto mais tempo o cliente demora para pagar, maior o custo financeiro para a empresa (o dinheiro fica parado mais tempo, podendo render juros em outras aplicações). Para compensar isso, a comissão é ajustada em função do prazo.');
             spacer(1);
-            txt('O PM e calculado como media ponderada: cada duplicata (parcela) tem um peso proporcional ao seu valor. Uma parcela maior "puxa" mais o prazo medio do que uma parcela menor. Veja a formula:');
+            txt('O PM é calculado como média ponderada: cada duplicata (parcela) tem um peso proporcional ao seu valor. Uma parcela maior "puxa" mais o prazo médio do que uma parcela menor. Veja a fórmula:');
             spacer(1);
             formula('PM = Soma(Dias_parcela_i x Valor_parcela_i) / Soma(Valor_parcela_i)');
             txt('Onde "i" representa cada duplicata diferente da NF. O resultado registrado para este item foi:', 0, false, 80,80,80);
             spacer(1);
-            kv('Prazo Medio calculado:', fmtN(pm_dias,0) + ' dias  =  ' + fmtN(pm_semanas,2) + ' semanas');
-            kv('Prazo padrao de referencia (baseline):', '28 dias  =  4,00 semanas');
-            kv('Diferenca em relacao ao baseline:', fmtN(pmDif,1) + ' dias  (' + fmtN(pmDif/7,2) + ' semanas)');
+            kv('Prazo Médio calculado:', fmtN(pm_dias,0) + ' dias  =  ' + fmtN(pm_semanas,2) + ' semanas');
+            kv('Prazo padrão de referência (baseline):', '28 dias  =  4,00 semanas');
+            kv('Diferença em relação ao baseline:', fmtN(pmDif,1) + ' dias  (' + fmtN(pmDif/7,2) + ' semanas)');
             spacer(3);
 
             // ══════════════════════════════════════════════════
             // ETAPA 7 — Ajuste de Prazo
             // ══════════════════════════════════════════════════
-            etapaHeader(7, 'Ajuste da Comissao pelo Prazo Medio', 230,126,34);
-            txt('A comissao base foi calculada assumindo um prazo padrao de 28 dias (4 semanas). Cada semana de diferenca em relacao a esse padrao ajusta a comissao em 0,05%:');
+            etapaHeader(7, 'Ajuste da Comissão pelo Prazo Médio', 64,136,60);
+            txt('A comissão base foi calculada assumindo um prazo padrão de 28 dias (4 semanas). Cada semana de diferença em relação a esse padrão ajusta a comissão em 0,05%:');
             checkY(12);
-            doc.setFillColor(255,247,235);
+            doc.setFillColor(232,253,232);
             doc.rect(ML+2, y, usableW-4, 11, 'F');
-            doc.setFont('helvetica','normal'); doc.setFontSize(7.2); doc.setTextColor(80,60,0);
-            doc.text('Prazo maior que 28 dias  ->  ajuste NEGATIVO (comissao reduz):  cada semana a mais vale -0,05%', ML+5, y+4);
-            doc.text('Prazo menor que 28 dias  ->  ajuste POSITIVO (comissao aumenta): cada semana a menos vale +0,05%', ML+5, y+8.5);
+            doc.setFont('helvetica','normal'); doc.setFontSize(7.2); doc.setTextColor(30,80,20);
+            doc.text('Prazo maior que 28 dias  ->  ajuste NEGATIVO (comissão reduz):  cada semana a mais vale -0,05%', ML+5, y+4);
+            doc.text('Prazo menor que 28 dias  ->  ajuste POSITIVO (comissão aumenta): cada semana a menos vale +0,05%', ML+5, y+8.5);
             doc.setFont('helvetica','normal'); doc.setTextColor(40,40,40);
             y += 12.5;
             spacer(1);
@@ -626,17 +658,17 @@ require_once __DIR__ . '/header.php';
             formula('Ajuste = -(' + fmtN(pmDif,1) + ' dias / 7) x 0,05%  =  -(' + fmtN(pmDif/7,4) + ' semanas) x 0,05%  =  ' + fmtPct(ajuste,4));
             spacer(1);
             if (Math.abs(pmDif) < 0.1) {
-                txt('Interpretacao: O PM e exatamente igual ao padrao de 28 dias. Nenhum ajuste necessario — o ajuste e zero.', 0, false, 90,90,90);
+                txt('Interpretação: O PM é exatamente igual ao padrão de 28 dias. Nenhum ajuste necessário — o ajuste é zero.', 0, false, 90,90,90);
             } else {
-                txt('Interpretacao: Como o prazo e ' + Math.abs(pmDif).toFixed(0) + ' dias ' + (pmDif > 0 ? 'a mais' : 'a menos') + ' que o padrao de 28 dias (' + Math.abs(pmDif/7).toFixed(2).replace('.',',') + ' semanas), a comissao e ' + (pmDif > 0 ? 'REDUZIDA' : 'AUMENTADA') + ' em ' + (Math.abs(ajuste)*100).toFixed(4).replace('.',',') + '%.', 0, false, 90,90,90);
+                txt('Interpretação: Como o prazo é ' + Math.abs(pmDif).toFixed(0) + ' dias ' + (pmDif > 0 ? 'a mais' : 'a menos') + ' que o padrão de 28 dias (' + Math.abs(pmDif/7).toFixed(2).replace('.',',') + ' semanas), a comissão é ' + (pmDif > 0 ? 'REDUZIDA' : 'AUMENTADA') + ' em ' + (Math.abs(ajuste)*100).toFixed(4).replace('.',',') + '%.', 0, false, 90,90,90);
             }
             spacer(3);
 
             // ══════════════════════════════════════════════════
             // ETAPA 8 — Validacoes de Aprovacao
             // ══════════════════════════════════════════════════
-            etapaHeader(8, 'Validacoes de Aprovacao', 231,76,60);
-            txt('Algumas situacoes excedem os limites normais de operacao e exigem aprovacao da gestao antes do pagamento da comissao. Isso e uma protecao para a empresa em casos atipicos. Duas regras sao verificadas:');
+            etapaHeader(8, 'Validações de Aprovação', 231,76,60);
+            txt('Algumas situações excedem os limites normais de operação e exigem aprovação da gestão antes do pagamento da comissão. Isso é uma proteção para a empresa em casos atípicos. Duas regras são verificadas:');
             spacer(2);
 
             const regras = [
@@ -645,16 +677,16 @@ require_once __DIR__ . '/header.php';
                     label: 'Desconto acima de 20,00%',
                     check: !semLista && dsc_pct > 0.20,
                     valor: fmtPct(dsc_pct,2) + ' (limite: 20,00%)',
-                    exp_ok:  'Desconto dentro do limite operacional. Nenhuma aprovacao necessaria por este criterio.',
-                    exp_nok: 'DESCONTO ACIMA DO LIMITE! Descontos acima de 20% prejudicam significativamente a margem da empresa e requerem autorizacao gerencial antes do pagamento da comissao.'
+                    exp_ok:  'Desconto dentro do limite operacional. Nenhuma aprovação necessária por este critério.',
+                    exp_nok: 'DESCONTO ACIMA DO LIMITE! Descontos acima de 20% prejudicam significativamente a margem da empresa e requerem autorização gerencial antes do pagamento da comissão.'
                 },
                 {
                     num: 2,
-                    label: 'Prazo Medio acima de 42 dias (6 semanas)',
+                    label: 'Prazo Médio acima de 42 dias (6 semanas)',
                     check: pm_dias > 42,
                     valor: fmtN(pm_dias,0) + ' dias (limite: 42 dias)',
-                    exp_ok:  'Prazo dentro do limite operacional. Nenhuma aprovacao necessaria por este criterio.',
-                    exp_nok: 'PRAZO ACIMA DO LIMITE! Prazos superiores a 42 dias representam custo financeiro significativo e requerem autorizacao gerencial antes do pagamento da comissao.'
+                    exp_ok:  'Prazo dentro do limite operacional. Nenhuma aprovação necessária por este critério.',
+                    exp_nok: 'PRAZO ACIMA DO LIMITE! Prazos superiores a 42 dias representam custo financeiro significativo e requerem autorização gerencial antes do pagamento da comissão.'
                 },
             ];
 
@@ -674,25 +706,25 @@ require_once __DIR__ . '/header.php';
             });
             spacer(1);
             if (flagAprov) {
-                resultado('STATUS DA ETAPA 8:', 'REQUER APROVACAO GERENCIAL', 254,226,226, 180,0,0);
+                resultado('STATUS DA ETAPA 8:', 'REQUER APROVAÇÃO GERENCIAL', 254,226,226, 180,0,0);
             } else {
-                resultado('STATUS DA ETAPA 8:', 'Sem pendencias de aprovacao', 232,246,239, 10,100,50);
+                resultado('STATUS DA ETAPA 8:', 'Sem pendências de aprovação', 232,246,239, 10,100,50);
             }
             spacer(3);
 
             // ══════════════════════════════════════════════════
             // ETAPA 9 — Calculo da Comissao
             // ══════════════════════════════════════════════════
-            etapaHeader(9, 'Calculo da Comissao sobre a Venda', 39,174,96);
+            etapaHeader(9, 'Cálculo da Comissão sobre a Venda', 64,136,60);
             if (semLista) {
                 checkY(7);
                 doc.setFillColor(255,243,205);
                 doc.rect(ML+2, y, usableW-4, 6, 'F');
                 doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(133,77,14);
-                doc.text('Comissao = R$ 0,00: produto sem Price List. Consulte a Etapa 5 acima.', ML+5, y+4);
+                doc.text('Comissão = R$ 0,00: produto sem Price List. Consulte a Etapa 5 acima.', ML+5, y+4);
                 doc.setFont('helvetica','normal'); doc.setTextColor(40,40,40); y += 7.5;
             } else {
-                txt('Agora reunimos todas as pecas calculadas nas etapas anteriores. O percentual final de comissao e a soma do percentual base (Etapa 5) com o ajuste de prazo (Etapa 7). Depois multiplicamos esse percentual pela Venda Net (Etapa 4) para chegar no valor monetario da comissao.');
+                txt('Agora reunimos todas as peças calculadas nas etapas anteriores. O percentual final de comissão é a soma do percentual base (Etapa 5) com o ajuste de prazo (Etapa 7). Depois multiplicamos esse percentual pela Venda Net (Etapa 4) para chegar no valor monetário da comissão.');
                 spacer(1);
                 txt('Passo 1 — Percentual Final:', 0, true, 50,80,50);
                 formula('% Final = % Base + Ajuste de Prazo');
@@ -703,22 +735,22 @@ require_once __DIR__ . '/header.php';
                     doc.setFillColor(255,243,205);
                     doc.rect(ML+2, y, usableW-4, 6, 'F');
                     doc.setFont('helvetica','bold'); doc.setFontSize(7.2); doc.setTextColor(133,77,14);
-                    doc.text('PISO MINIMO APLICADO: O % calculado ficaria abaixo de 0,05%. A regra garante no minimo 0,05%.', ML+5, y+4);
+                    doc.text('PISO MÍNIMO APLICADO: O % calculado ficaria abaixo de 0,05%. A regra garante no mínimo 0,05%.', ML+5, y+4);
                     doc.setFont('helvetica','normal'); doc.setTextColor(40,40,40); y += 7.5;
                 }
                 spacer(1);
-                txt('Passo 2 — Valor da Comissao:', 0, true, 50,80,50);
-                formula('Comissao = Venda Net x % Final');
-                formula('Comissao = R$ ' + fmtBRL(venda_net) + ' x ' + fmtPct(final_pct,4) + '  =  R$ ' + fmtBRL(comissaoPreTeto));
+                txt('Passo 2 — Valor da Comissão:', 0, true, 50,80,50);
+                formula('Comissão = Venda Net x % Final');
+                formula('Comissão = R$ ' + fmtBRL(venda_net) + ' x ' + fmtPct(final_pct,4) + '  =  R$ ' + fmtBRL(comissaoPreTeto));
                 spacer(1);
-                resultado('Comissao calculada (antes de aplicar teto):', 'R$ ' + fmtBRL(comissaoPreTeto), 232,246,239, 10,100,50);
+                resultado('Comissão calculada (antes de aplicar teto):', 'R$ ' + fmtBRL(comissaoPreTeto), 232,246,239, 10,100,50);
             }
             spacer(3);
 
             // ══════════════════════════════════════════════════
             // ETAPA 10 — Piso e Teto
             // ══════════════════════════════════════════════════
-            etapaHeader(10, 'Aplicacao do Piso Minimo e Teto Maximo', 52,73,94);
+            etapaHeader(10, 'Aplicação do Piso Mínimo e Teto Máximo', 76,23,114);
             txt('Para garantir equidade, existem dois limites que protegem tanto o representante (piso) quanto a empresa (teto):');
             spacer(2);
 
@@ -727,11 +759,11 @@ require_once __DIR__ . '/header.php';
             doc.setFillColor(240,253,244);
             doc.rect(ML+2, y, usableW-4, 12.5, 'F');
             doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(10,100,50);
-            doc.text('PISO (minimo): 0,05% da Venda Net', ML+5, y+4.5);
+            doc.text('PISO (mínimo): 0,05% da Venda Net', ML+5, y+4.5);
             doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor(60,60,60);
-            doc.text('Nenhuma comissao pode ser menor que 0,05% da Venda Net. Isso garante remuneracao minima ao representante.', ML+7, y+8.5);
+            doc.text('Nenhuma comissão pode ser menor que 0,05% da Venda Net. Isso garante remuneração mínima ao representante.', ML+7, y+8.5);
             const pisoAtivado = !semLista && final_pct < 0.0005;
-            doc.text('Piso minimo = R$ ' + fmtBRL(venda_net * 0.0005) + '  |  % Final = ' + fmtPct(final_pct,4) + '  ->  ' + (pisoAtivado ? 'PISO ATIVADO (0,05% aplicado).' : 'Piso NAO ativado (% Final ja esta acima do minimo).'), ML+7, y+12);
+            doc.text('Piso mínimo = R$ ' + fmtBRL(venda_net * 0.0005) + '  |  % Final = ' + fmtPct(final_pct,4) + '  ->  ' + (pisoAtivado ? 'PISO ATIVADO (0,05% aplicado).' : 'Piso NÃO ativado (% Final já está acima do mínimo).'), ML+7, y+12);
             doc.setTextColor(40,40,40);
             y += 14;
             spacer(2);
@@ -742,16 +774,16 @@ require_once __DIR__ . '/header.php';
             doc.rect(ML+2, y, usableW-4, flagTeto ? 18 : 12.5, 'F');
             doc.setFont('helvetica','bold'); doc.setFontSize(7.5);
             doc.setTextColor(...(flagTeto ? [180,100,0] : [10,100,50]));
-            doc.text('TETO (maximo): R$ 25.000,00 por item', ML+5, y+4.5);
+            doc.text('TETO (máximo): R$ 25.000,00 por item', ML+5, y+4.5);
             doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor(60,60,60);
-            doc.text('Nenhuma comissao pode ultrapassar R$ 25.000,00 por item. A parcela acima do teto vira bonificacao (10% do excedente).', ML+7, y+8.5);
+            doc.text('Nenhuma comissão pode ultrapassar R$ 25.000,00 por item. A parcela acima do teto vira bonificação (10% do excedente).', ML+7, y+8.5);
             if (flagTeto) {
                 const excedente = comissaoPreTeto - 25000;
-                doc.text('TETO ATIVADO! Calculo: R$ 25.000,00 + (' + 'R$ ' + fmtBRL(comissaoPreTeto) + ' - R$ 25.000,00) x 10%', ML+7, y+12.5);
+                doc.text('TETO ATIVADO! Cálculo: R$ 25.000,00 + (' + 'R$ ' + fmtBRL(comissaoPreTeto) + ' - R$ 25.000,00) x 10%', ML+7, y+12.5);
                 doc.text('= R$ 25.000,00 + R$ ' + fmtBRL(excedente) + ' x 10%  =  R$ 25.000,00 + R$ ' + fmtBRL(excedente*0.1) + '  =  R$ ' + fmtBRL(comissao), ML+7, y+16.5);
                 y += 19.5;
             } else {
-                doc.text('Comissao calculada (R$ ' + fmtBRL(comissaoPreTeto) + ') esta abaixo de R$ 25.000,00. Teto NAO ativado.', ML+7, y+12);
+                doc.text('Comissão calculada (R$ ' + fmtBRL(comissaoPreTeto) + ') está abaixo de R$ 25.000,00. Teto NÃO ativado.', ML+7, y+12);
                 y += 14;
             }
             doc.setTextColor(40,40,40);
@@ -773,7 +805,7 @@ require_once __DIR__ . '/header.php';
             doc.text('R$ ' + fmtBRL(comissao), PW-MR-4, y+5.5, {align:'right'});
             doc.setFontSize(7.5); doc.setFont('helvetica','normal');
             const pctEfetiva = (venda_net > 0 && !semLista) ? fmtPct(comissao/venda_net,4) : '--';
-            doc.text('Venda Net: R$ ' + fmtBRL(venda_net) + '  |  % Efetiva: ' + pctEfetiva + '  |  ' + (semLista ? 'S/ Price List — comissao zerada' : flagTeto ? 'Teto de R$ 25.000 atingido' : flagAprov ? 'Aguardando aprovacao gerencial' : 'Comissao aprovada automaticamente'), ML+4, y+11);
+            doc.text('Venda Net: R$ ' + fmtBRL(venda_net) + '  |  % Efetiva: ' + pctEfetiva + '  |  ' + (semLista ? 'S/ Price List — comissão zerada' : flagTeto ? 'Teto de R$ 25.000 atingido' : flagAprov ? 'Aguardando aprovação gerencial' : 'Comissão aprovada automaticamente'), ML+4, y+11);
             doc.setTextColor(40,40,40); doc.setDrawColor(0,0,0); doc.setLineWidth(0.2);
             y += 17;
 
@@ -786,7 +818,7 @@ require_once __DIR__ . '/header.php';
 
             // Separador entre itens
             checkY(12);
-            doc.setDrawColor(10,30,66); doc.setLineWidth(0.6);
+            doc.setDrawColor(107,33,168); doc.setLineWidth(0.6);
             doc.line(ML, y+4, PW-MR, y+4); y += 12;
         });
 
@@ -794,11 +826,12 @@ require_once __DIR__ . '/header.php';
         checkY(14);
         const totalNet = filteredItems.reduce(function(a,i){ return a+parseFloat(i.venda_net||0); }, 0);
         const totalCom = filteredItems.reduce(function(a,i){ return a+parseFloat(i.valor_comissao||0); }, 0);
-        doc.setFillColor(10,30,66); doc.rect(ML, y, usableW, 12, 'F');
+        doc.setFillColor(107,33,168); doc.rect(ML, y, usableW, 12, 'F');
+        doc.setFillColor(64,136,60);  doc.rect(ML, y+12, usableW, 2, 'F');
         doc.setTextColor(255,255,255); doc.setFontSize(9); doc.setFont('helvetica','bold');
         doc.text('RESUMO GERAL: ' + filteredItems.length + ' item(ns)', ML+4, y+5.5);
         doc.setFontSize(8);
-        doc.text('Venda Net Total: R$ ' + fmtBRL(totalNet) + '  |  Comissao Total: R$ ' + fmtBRL(totalCom) + '  |  % Media Efetiva: ' + (totalNet>0 ? ((totalCom/totalNet)*100).toFixed(4).replace('.',',')+'%' : '--'), ML+4, y+10.5);
+        doc.text('Venda Net Total: R$ ' + fmtBRL(totalNet) + '  |  Comissão Total: R$ ' + fmtBRL(totalCom) + '  |  % Média Efetiva: ' + (totalNet>0 ? ((totalCom/totalNet)*100).toFixed(4).replace('.',',')+'%' : '--'), ML+4, y+10.5);
         doc.setTextColor(0,0,0);
 
         const slug = selectedRep.replace(/[^\w]/g,'_').slice(0,20);
