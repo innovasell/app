@@ -29,6 +29,13 @@ require_once __DIR__ . '/header.php';
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
 <style>
     @media print { .no-print { display:none!important; } body { font-size:0.75rem; } }
+    /* Linhas de agrupamento por NF na tabela */
+    tr.nf-group-header td { background: #e8f0ff !important; color: #0a1e42; font-weight: 700; font-size: 0.8rem; border-top: 2px solid #0047fa !important; letter-spacing: 0.02em; }
+    tr.nf-group-subtotal td { background: #d1f0d8 !important; color: #1a5c28; font-weight: 700; font-size: 0.8rem; border-bottom: 2px solid #40883c !important; }
+    tr.nf-group-totalgeral td { background: #0a1e42 !important; color: #fff; font-weight: 700; font-size: 0.85rem; }
+    /* Toggle agrupamento */
+    .btn-agrupar-nf { transition: all .2s; }
+    .btn-agrupar-nf.active { background-color: #0047fa !important; color: #fff !important; border-color: #0047fa !important; }
 </style>
 
     <div class="container-fluid px-4 py-3">
@@ -40,8 +47,18 @@ require_once __DIR__ . '/header.php';
                 <h4 class="d-inline text-primary">Lote #<?= $batch_id ?> — <?= htmlspecialchars($batch['nome'] ?? 'Sem nome') ?></h4>
                 <small class="text-muted ms-2"><?= date('d/m/Y H:i', strtotime($batch['created_at'])) ?></small>
             </div>
-            <div class="d-flex gap-2">
-                <button class="btn btn-outline-success" onclick="gerarPDF()"><i class="bi bi-file-earmark-pdf"></i> Gerar PDF</button>
+            <div class="d-flex gap-2 flex-wrap">
+                <!-- Bloco Gerar PDF + toggle Agrupar NF -->
+                <div class="d-flex align-items-center gap-0">
+                    <button class="btn btn-outline-success rounded-end-0" onclick="gerarPDF()" title="Gerar PDF com os itens do filtro atual">
+                        <i class="bi bi-file-earmark-pdf"></i> Gerar PDF
+                    </button>
+                    <button id="btnAgruparNF" class="btn btn-outline-success rounded-start-0 border-start-0 btn-agrupar-nf ps-2 pe-2"
+                            onclick="toggleAgruparNF()"
+                            title="Agrupar por NF: insere subtotais por NF no PDF e na tabela">
+                        <i class="bi bi-layers"></i><span id="lblAgrupar" style="font-size:0.75rem; margin-left:3px">NF</span>
+                    </button>
+                </div>
                 <button class="btn btn-outline-primary" onclick="gerarPDFResumo()" title="Resumo agrupado por representante"><i class="bi bi-bar-chart-line"></i> Resumo PDF</button>
                 <button class="btn btn-outline-info" onclick="gerarPDFAuditoria()" title="Etapas de cálculo para auditoria"><i class="fas fa-file-contract"></i> Auditoria PDF</button>
                 <button class="btn btn-outline-warning" onclick="reprocessarLote()" title="Recalcula comissões com PTAX e PM corretos"><i class="fas fa-sync-alt"></i> Reprocessar Lote</button>
@@ -82,6 +99,8 @@ require_once __DIR__ . '/header.php';
                     <button class="btn btn-sm btn-outline-warning ms-2" onclick="diagnoseSemLista()" title="Analisar por que produtos S/Lista não foram encontrados na price list">
                         <i class="fas fa-microscope"></i> Diagnóstico S/Lista
                     </button>
+                    <!-- campo hidden mantido para compatibilidade com gerarPDF() -->
+                    <input type="hidden" id="chkAgruparNF" value="0">
                 </div>
             </div>
         </div>
@@ -1047,38 +1066,106 @@ require_once __DIR__ . '/header.php';
 
         const fmtBRL = v => Math.ceil(parseFloat(v||0)).toLocaleString('pt-BR', {minimumFractionDigits:0, maximumFractionDigits:0});
         const fmtPct = v => (parseFloat(v||0)*100).toFixed(2) + '%';
+        const agrupar = agruparNFAtivo();
 
         const tbody = document.getElementById('tbodyLote');
         tbody.innerHTML = '';
-        data.forEach(item => {
-            const tr = document.createElement('tr');
-            tr.dataset.id = item.id;
-            tr.innerHTML = `
-                <td>${item.representante||'-'}</td>
-                <td>${item.data_nf||'-'}<br><small class="text-muted">${item.nfe}</small></td>
-                <td><b>${item.codigo}</b><br><small>${item.embalagem}</small></td>
-                <td title="${item.cliente||''}">${(item.cliente||'-').substring(0,25)}</td>
-                <td>R$ ${fmtBRL(item.venda_net)}</td>
-                <td>R$ ${fmtBRL(item.preco_lista_brl)}</td>
-                <td>${fmtPct(item.desconto_pct)}</td>
-                <td>${fmtPct(item.comissao_base_pct)}</td>
-                <td>${Math.round(item.pm_dias||0)}d</td>
-                <td><b>${fmtPct(item.comissao_final_pct)}</b></td>
-                <td class="text-end fw-bold text-success">R$ ${fmtBRL(item.valor_comissao)}</td>
-                <td>${statusBadge(item)}</td>
-                <td class="no-print">
-                    <button class="btn btn-sm btn-outline-primary" onclick="abrirEdicao(${item.id})"><i class="bi bi-pencil"></i></button>
-                </td>
-            `;
-            tbody.appendChild(tr);
-        });
 
-        dtTable = $('#tblLote').DataTable({
-            language: { url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/pt-BR.json' },
-            order: [[0, 'asc']],
-            pageLength: 50,
-            columnDefs: [{ targets: [-1], orderable: false }]
-        });
+        if (!agrupar) {
+            // ── Modo normal: lista plana ──────────────────────────────────────
+            data.forEach(item => {
+                tbody.appendChild(criarLinhaItem(item, fmtBRL, fmtPct));
+            });
+        } else {
+            // ── Modo agrupado por NF ──────────────────────────────────────────
+            const grupos = {};
+            const ordemNF = [];
+            data.forEach(item => {
+                if (!grupos[item.nfe]) { grupos[item.nfe] = []; ordemNF.push(item.nfe); }
+                grupos[item.nfe].push(item);
+            });
+
+            const totalNetGeral = data.reduce((s, i) => s + parseFloat(i.venda_net||0), 0);
+            const totalComGeral = data.reduce((s, i) => s + Math.ceil(parseFloat(i.valor_comissao||0)), 0);
+
+            ordemNF.forEach(nfe => {
+                const itensNF = grupos[nfe];
+                const netNF   = itensNF.reduce((s, i) => s + parseFloat(i.venda_net||0), 0);
+                const comNF   = itensNF.reduce((s, i) => s + Math.ceil(parseFloat(i.valor_comissao||0)), 0);
+
+                // Linha cabeçalho da NF
+                const trHead = document.createElement('tr');
+                trHead.className = 'nf-group-header';
+                const nfDate = itensNF[0]?.data_nf || '';
+                const nfRep  = itensNF[0]?.representante || '';
+                trHead.innerHTML = `<td colspan="13">
+                    <i class="bi bi-file-earmark-text me-1"></i>
+                    NF <b>${nfe}</b>
+                    <span class="ms-3 text-muted fw-normal" style="font-size:0.75rem">${nfDate}  &nbsp;•&nbsp;  ${nfRep}</span>
+                    <span class="ms-3 badge bg-primary" style="font-size:0.7rem;font-weight:500">${itensNF.length} iten${itensNF.length>1?'s':''}</span>
+                </td>`;
+                tbody.appendChild(trHead);
+
+                // Itens da NF
+                itensNF.forEach(item => tbody.appendChild(criarLinhaItem(item, fmtBRL, fmtPct)));
+
+                // Linha subtotal da NF
+                const trSub = document.createElement('tr');
+                trSub.className = 'nf-group-subtotal';
+                trSub.innerHTML = `
+                    <td colspan="4" class="text-end pe-2">Subtotal NF ${nfe}</td>
+                    <td>R$ ${fmtBRL(netNF)}</td>
+                    <td></td><td></td><td></td><td></td><td></td>
+                    <td class="text-end">R$ ${fmtBRL(comNF)}</td>
+                    <td></td><td></td>`;
+                tbody.appendChild(trSub);
+            });
+
+            // Linha total geral
+            const trTotal = document.createElement('tr');
+            trTotal.className = 'nf-group-totalgeral';
+            trTotal.innerHTML = `
+                <td colspan="4" class="text-end pe-2">TOTAL GERAL (${data.length} itens | ${ordemNF.length} NFs)</td>
+                <td>R$ ${fmtBRL(totalNetGeral)}</td>
+                <td></td><td></td><td></td><td></td><td></td>
+                <td class="text-end">R$ ${fmtBRL(totalComGeral)}</td>
+                <td></td><td></td>`;
+            tbody.appendChild(trTotal);
+        }
+
+        // DataTable — desabilitar quando agrupado (layout customizado não é compatível)
+        if (!agrupar) {
+            dtTable = $('#tblLote').DataTable({
+                language: { url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/pt-BR.json' },
+                order: [[0, 'asc']],
+                pageLength: 50,
+                columnDefs: [{ targets: [-1], orderable: false }]
+            });
+        }
+    }
+
+    // Cria uma <tr> de item para reutilizar nos dois modos
+    function criarLinhaItem(item, fmtBRL, fmtPct) {
+        const tr = document.createElement('tr');
+        tr.dataset.id = item.id;
+        tr.innerHTML = `
+            <td>${item.representante||'-'}</td>
+            <td>${item.data_nf||'-'}<br><small class="text-muted">${item.nfe}</small></td>
+            <td><b>${item.codigo}</b><br><small>${item.embalagem}</small></td>
+            <td title="${item.cliente||''}">${(item.cliente||'-').substring(0,25)}</td>
+            <td>R$ ${fmtBRL(item.venda_net)}</td>
+            <td>R$ ${fmtBRL(item.preco_lista_brl)}</td>
+            <td>${fmtPct(item.desconto_pct)}</td>
+            <td>${fmtPct(item.comissao_base_pct)}</td>
+            <td>${Math.round(item.pm_dias||0)}d</td>
+            <td><b>${fmtPct(item.comissao_final_pct)}</b></td>
+            <td class="text-end fw-bold text-success">R$ ${fmtBRL(item.valor_comissao)}</td>
+            <td>${statusBadge(item)}</td>
+            <td class="no-print">
+                <button class="btn btn-sm btn-outline-primary" onclick="abrirEdicao(${item.id})"><i class="bi bi-pencil"></i></button>
+            </td>
+        `;
+        return tr;
     }
 
     function aplicarFiltros() {
@@ -1207,18 +1294,96 @@ require_once __DIR__ . '/header.php';
         }
     }
 
+    // === Toggle agrupar por NF ===
+    let _agruparNF = false;
+    function agruparNFAtivo() { return _agruparNF; }
+    function toggleAgruparNF() {
+        _agruparNF = !_agruparNF;
+        // Mantém o campo hidden sincronizado (usado pela gerarPDF)
+        document.getElementById('chkAgruparNF').value = _agruparNF ? '1' : '0';
+        const btn = document.getElementById('btnAgruparNF');
+        const lbl = document.getElementById('lblAgrupar');
+        if (_agruparNF) {
+            btn.classList.add('active');
+            lbl.innerHTML = 'NF <i class="bi bi-check-lg"></i>';
+            btn.title = 'Agrupamento por NF ativo — clique para desativar';
+        } else {
+            btn.classList.remove('active');
+            lbl.textContent = 'NF';
+            btn.title = 'Agrupar por NF: insere subtotais por NF no PDF e na tabela';
+        }
+        renderTabela(filteredItems);
+    }
+
     // === PDF via jsPDF ===
-    function gerarPDF() {
+    async function gerarPDF() {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a3' });
+        const PW  = doc.internal.pageSize.getWidth();
+        const ML = 14, MR = 14;
 
-        const batchNome = fixText(document.querySelector('h4.text-primary').textContent);
-        doc.setFontSize(13);
-        doc.text(batchNome, 14, 14);
-        doc.setFontSize(9);
-        doc.text('Gerado em: ' + new Date().toLocaleString('pt-BR'), 14, 20);
+        const agruparPorNF = _agruparNF;
+        const batchNome    = fixText(document.querySelector('h4.text-primary').textContent);
+        const geradoEm     = new Date().toLocaleString('pt-BR');
 
-        const dados = filteredItems.map(item => {
+        const filtroAtivo  = document.querySelector('input[name=filtroStatus]:checked').value;
+        const repSelect    = document.getElementById('filtroRep');
+        const selectedReps = Array.from(repSelect.selectedOptions).map(o => o.value).filter(v => v !== '');
+        const repFiltro    = fixText(selectedReps.length ? selectedReps.join(', ') : 'Todos');
+
+        // Formata BRL inteiro (ceil já aplicado no banco)
+        const fmtBRL = v => Math.ceil(parseFloat(v||0)).toLocaleString('pt-BR', {minimumFractionDigits:0, maximumFractionDigits:0});
+
+        // ── Pré-carrega logo ──────────────────────────────────────────────────
+        let logoData = null;
+        try {
+            const logoImg = await new Promise((res, rej) => {
+                const img = new Image();
+                img.onload = () => res(img);
+                img.onerror = () => rej();
+                img.src = '../sistema-cotacoes/assets/LOGO.png';
+            });
+            const cv = document.createElement('canvas');
+            cv.width = logoImg.naturalWidth || 220; cv.height = logoImg.naturalHeight || 60;
+            cv.getContext('2d').drawImage(logoImg, 0, 0);
+            logoData = cv.toDataURL('image/png');
+        } catch(e) { logoData = null; }
+
+        // ── Cabeçalho do documento ────────────────────────────────────────────
+        // Fundo branco + faixa azul escura
+        doc.setFillColor(255, 255, 255);
+        doc.rect(0, 0, PW, 16, 'F');
+        doc.setFillColor(10, 30, 66);
+        doc.rect(0, 16, PW, 1.5, 'F');
+
+        if (logoData) { doc.addImage(logoData, 'PNG', PW - MR - 44, 1.5, 44, 12); }
+
+        doc.setTextColor(10, 30, 66);
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(11);
+        doc.text('RELATORIO DE COMISSOES', ML, 8);
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5);
+        doc.setTextColor(80, 80, 80);
+        doc.text(batchNome, ML, 13);
+
+        const startY = 22;
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(80, 80, 80);
+        doc.text('Gerado em: ' + geradoEm + '   |   Filtro: Status=' + filtroAtivo + ' | Rep=' + repFiltro +
+            (agruparPorNF ? '   |   Agrupado por NF' : ''), ML, startY - 1);
+
+        doc.setTextColor(0, 0, 0);
+
+        // ── Colunas do autoTable ───────────────────────────────────────────────
+        const HEAD = [['Representante','Data','NF','Código','Produto','Cliente','Venda Net','Pricelist','Desc%','% Final','Comissão']];
+        const COL_STYLES = {
+            4: { cellWidth: 'auto' }, // Produto
+            5: { cellWidth: 'auto' }, // Cliente
+            6: { halign: 'right' },   // Venda Net
+            9: { halign: 'right' },   // % Final
+            10: { halign: 'right' }   // Comissão
+        };
+
+        // ── Converte um item em linha de dados ────────────────────────────────
+        const itemParaLinha = item => {
             const semLista = parseInt(item.lista_nao_encontrada||0) === 1;
             return [
                 fixText((item.representante||'-').substring(0,20)),
@@ -1227,43 +1392,114 @@ require_once __DIR__ . '/header.php';
                 item.codigo,
                 fixText((item.descricao||'-').substring(0,80)),
                 fixText((item.cliente||'-').substring(0,22)),
-                'R$ ' + parseFloat(item.venda_net||0).toLocaleString('pt-BR',{minimumFractionDigits:2}),
+                'R$ ' + fmtBRL(item.venda_net),
                 semLista ? 'S/ Lista' : 'R$ ' + parseFloat(item.preco_lista_brl||0).toLocaleString('pt-BR',{minimumFractionDigits:2}),
                 semLista ? '-' : (parseFloat(item.desconto_pct||0)*100).toFixed(1) + '%',
                 semLista ? '-' : (parseFloat(item.comissao_final_pct||0)*100).toFixed(2) + '%',
-                semLista ? 'S/ Lista' : 'R$ ' + parseFloat(item.valor_comissao||0).toLocaleString('pt-BR',{minimumFractionDigits:2})
+                semLista ? 'S/ Lista' : 'R$ ' + fmtBRL(item.valor_comissao)
             ];
-        });
+        };
+
+        // ── Totais gerais ──────────────────────────────────────────────────────
+        const totalNetGeral = filteredItems.reduce((s, i) => s + parseFloat(i.venda_net||0), 0);
+        const totalComGeral = filteredItems.reduce((s, i) => s + Math.ceil(parseFloat(i.valor_comissao||0)), 0);
+
+        // ── Linha de rodapé total geral ────────────────────────────────────────
+        const linhaTotal = (label) => [
+            { content: label, colSpan: 6,
+              styles: { fontStyle: 'bold', fillColor: [10, 30, 66], textColor: 255, halign: 'right' } },
+            { content: 'R$ ' + fmtBRL(totalNetGeral),
+              styles: { fontStyle: 'bold', fillColor: [10, 30, 66], textColor: 255, halign: 'right' } },
+            { content: '', styles: { fillColor: [10, 30, 66] } },
+            { content: '', styles: { fillColor: [10, 30, 66] } },
+            { content: '', styles: { fillColor: [10, 30, 66] } },
+            { content: 'R$ ' + fmtBRL(totalComGeral),
+              styles: { fontStyle: 'bold', fillColor: [10, 30, 66], textColor: 255, halign: 'right' } }
+        ];
+
+        let body;
+
+        if (!agruparPorNF) {
+            // ── Modo normal: lista plana + total geral no final ────────────────
+            body = filteredItems.map(itemParaLinha);
+            body.push(linhaTotal('TOTAL GERAL (' + filteredItems.length + ' itens)'));
+
+        } else {
+            // ── Modo agrupado por NF ───────────────────────────────────────────
+            // Agrupa itens mantendo a ordem de aparecimento das NFs
+            const grupos = {};
+            const ordemNF = [];
+            filteredItems.forEach(item => {
+                if (!grupos[item.nfe]) {
+                    grupos[item.nfe] = [];
+                    ordemNF.push(item.nfe);
+                }
+                grupos[item.nfe].push(item);
+            });
+
+            body = [];
+            let nfIdx = 0;
+            ordemNF.forEach(nfe => {
+                nfIdx++;
+                const itensNF = grupos[nfe];
+                const netNF   = itensNF.reduce((s, i) => s + parseFloat(i.venda_net||0), 0);
+                const comNF   = itensNF.reduce((s, i) => s + Math.ceil(parseFloat(i.valor_comissao||0)), 0);
+
+                // Cabeçalho da NF (linha título)
+                body.push([
+                    { content: 'NF ' + nfe + '   (' + itensNF.length + ' ite' + (itensNF.length > 1 ? 'ns' : 'm') + ')',
+                      colSpan: 11,
+                      styles: { fontStyle: 'bold', fillColor: [230, 238, 255], textColor: [10, 30, 66], fontSize: 8 } }
+                ]);
+
+                // Itens da NF
+                itensNF.forEach(item => body.push(itemParaLinha(item)));
+
+                // Subtotal da NF
+                body.push([
+                    { content: 'Subtotal NF ' + nfe, colSpan: 6,
+                      styles: { fontStyle: 'bold', fillColor: [64, 136, 60], textColor: 255, halign: 'right', fontSize: 7.5 } },
+                    { content: 'R$ ' + fmtBRL(netNF),
+                      styles: { fontStyle: 'bold', fillColor: [64, 136, 60], textColor: 255, halign: 'right' } },
+                    { content: '', styles: { fillColor: [64, 136, 60] } },
+                    { content: '', styles: { fillColor: [64, 136, 60] } },
+                    { content: '', styles: { fillColor: [64, 136, 60] } },
+                    { content: 'R$ ' + fmtBRL(comNF),
+                      styles: { fontStyle: 'bold', fillColor: [64, 136, 60], textColor: 255, halign: 'right' } }
+                ]);
+            });
+
+            // Total geral ao final
+            body.push(linhaTotal('TOTAL GERAL (' + filteredItems.length + ' itens | ' + ordemNF.length + ' NFs)'));
+        }
 
         doc.autoTable({
-            startY: 25,
-            head: [['Representante','Data','NF','Código','Produto','Cliente','Venda Net','Pricelist','Desc%','% Final','Comissão']],
-            body: dados,
+            startY: startY + 4,
+            head: HEAD,
+            body,
             styles: { fontSize: 7.5, cellPadding: 1.5, valign: 'middle' },
-            headStyles: { fillColor: [13, 110, 253] },
-            alternateRowStyles: { fillColor: [245, 245, 245] },
-            columnStyles: {
-                4: { cellWidth: 'auto' }, // Produto
-                5: { cellWidth: 'auto' }, // Cliente
-                9: { halign: 'right' },   // % Final
-                10: { halign: 'right' }   // Comissão
-            },
+            headStyles: { fillColor: [10, 30, 66] },
+            alternateRowStyles: { fillColor: [245, 247, 252] },
+            columnStyles: COL_STYLES,
             didParseCell: (data) => {
-                // Destaca linhas S/Lista em cinza claro
-                if (data.row.raw && data.row.raw[7] === 'S/ Lista') {
+                // Linhas de item S/Lista em cinza itálico
+                if (!data.row.raw || typeof data.row.raw[0] !== 'string') return; // pula linhas de objeto (subtotal/total)
+                if (data.row.raw[7] === 'S/ Lista') {
                     data.cell.styles.textColor = [120, 120, 120];
                     data.cell.styles.fontStyle = 'italic';
                 }
             }
         });
 
-        const filtroAtivo = document.querySelector('input[name=filtroStatus]:checked').value;
-        const repSelect = document.getElementById('filtroRep');
-        const selectedReps = Array.from(repSelect.selectedOptions).map(opt => opt.value).filter(val => val !== "");
-        const repFiltro = fixText(selectedReps.length ? selectedReps.join(', ') : 'Todos');
-
-        doc.setFontSize(7);
-        doc.text(`Filtro: Status=${filtroAtivo} | Representante=${repFiltro} | Total: ${filteredItems.length} itens`, 14, doc.lastAutoTable.finalY + 5);
+        // Rodapé final com totais
+        const finalY = doc.lastAutoTable.finalY;
+        doc.setFontSize(7.5); doc.setFont('helvetica', 'bold'); doc.setTextColor(10, 30, 66);
+        const rodapeTxt = 'Total Venda Net: R$ ' + fmtBRL(totalNetGeral) +
+                       '  |  Total Comissoes: R$ ' + fmtBRL(totalComGeral) +
+                       '  |  ' + filteredItems.length + ' iten' + (filteredItems.length !== 1 ? 's' : '');
+        doc.text(rodapeTxt, ML, finalY + 5);
+        doc.setFont('helvetica', 'normal'); doc.setTextColor(140, 140, 140);
+        doc.text('Gerado por Innovasell Cloud — Modulo de Comissoes', PW - MR, finalY + 5, { align: 'right' });
 
         doc.save(`comissao_lote_${BATCH_ID}.pdf`);
     }
