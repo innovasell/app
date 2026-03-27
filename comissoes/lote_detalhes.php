@@ -259,6 +259,11 @@ require_once __DIR__ . '/header.php';
     const modalSelectEmb = new bootstrap.Modal(document.getElementById('modalSelectEmb'));
     const modalReprocessar = new bootstrap.Modal(document.getElementById('modalReprocessar'));
 
+    // Remove diacríticos para compatibilidade com fontes padrão do jsPDF (Helvetica não suporta UTF-8)
+    function fixText(str) {
+        return (str || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    }
+
     // ══════════════════════════════════════════════════════════════════════
     // PDF AUDITORIA — passo a passo por item para revisão de vendedor
     // ══════════════════════════════════════════════════════════════════════
@@ -277,9 +282,9 @@ require_once __DIR__ . '/header.php';
         const fmtPct = v => (parseFloat(v||0)*100).toFixed(4).replace('.',',') + '%';
         const fmtN   = (v,d=2) => parseFloat(v||0).toFixed(d).replace('.',',');
 
-        const batchNome   = document.querySelector('h4.text-primary')?.textContent || 'Lote';
-        const selectedRep = Array.from(document.getElementById('filtroRep').selectedOptions)
-            .map(o => o.value).filter(v => v).join(', ') || 'Todos os representantes';
+        const batchNome   = fixText(document.querySelector('h4.text-primary')?.textContent || 'Lote');
+        const selectedRep = fixText(Array.from(document.getElementById('filtroRep').selectedOptions)
+            .map(o => o.value).filter(v => v).join(', ') || 'Todos os representantes');
         const geradoEm = new Date().toLocaleString('pt-BR');
 
         let y = 14, pageNum = 1;
@@ -342,10 +347,10 @@ require_once __DIR__ . '/header.php';
 
             // Info linha 1
             doc.setFontSize(7.5);
-            doc.text(`Produto: ${(item.descricao||'').slice(0,58)}`, ML+1, y); y += 4;
-            doc.text(`Cliente: ${(item.cliente||'—').slice(0,42)}`, ML+1, y);
+            doc.text(`Produto: ${fixText(item.descricao||'').slice(0,58)}`, ML+1, y); y += 4;
+            doc.text(`Cliente: ${fixText((item.cliente||'—').slice(0,42))}`, ML+1, y);
             doc.text(`Data: ${item.data_nf||'—'}  |  CFOP: ${item.cfop||'—'}  |  Qtde: ${fmtN(item.qtde,4)} UN`, PW/2, y); y += 3.5;
-            doc.text(`Representante: ${item.representante||'—'}  |  V.Bruto: R$ ${fmtBRL(item.valor_bruto)}  |  ICMS: R$ ${fmtBRL(item.icms)}  |  PIS: R$ ${fmtBRL(item.pis)}  |  COFINS: R$ ${fmtBRL(item.cofins)}`, ML+1, y); y += 4;
+            doc.text(`Representante: ${fixText(item.representante||'—')}  |  V.Bruto: R$ ${fmtBRL(item.valor_bruto)}  |  ICMS: R$ ${fmtBRL(item.icms)}  |  PIS: R$ ${fmtBRL(item.pis)}  |  COFINS: R$ ${fmtBRL(item.cofins)}`, ML+1, y); y += 4;
 
             doc.setDrawColor(220,220,220); doc.setLineWidth(0.2); doc.line(ML+1,y,PW-MR-1,y); y += 2.5;
 
@@ -735,25 +740,28 @@ require_once __DIR__ . '/header.php';
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a3' });
 
-        const batchNome = document.querySelector('h4.text-primary').textContent;
+        const batchNome = fixText(document.querySelector('h4.text-primary').textContent);
         doc.setFontSize(13);
         doc.text(batchNome, 14, 14);
         doc.setFontSize(9);
         doc.text('Gerado em: ' + new Date().toLocaleString('pt-BR'), 14, 20);
 
-        const dados = filteredItems.map(item => [
-            (item.representante||'-').substring(0,20),
-            item.data_nf || '-',
-            item.nfe,
-            item.codigo,
-            (item.descricao||'-').substring(0,80), // Produto
-            (item.cliente||'-').substring(0,22),
-            'R$ ' + parseFloat(item.venda_net||0).toLocaleString('pt-BR',{minimumFractionDigits:2}),
-            'R$ ' + parseFloat(item.preco_lista_brl||0).toLocaleString('pt-BR',{minimumFractionDigits:2}),
-            (parseFloat(item.desconto_pct||0)*100).toFixed(1) + '%',
-            (parseFloat(item.comissao_final_pct||0)*100).toFixed(2) + '%',
-            'R$ ' + parseFloat(item.valor_comissao||0).toLocaleString('pt-BR',{minimumFractionDigits:2})
-        ]);
+        const dados = filteredItems.map(item => {
+            const semLista = parseInt(item.lista_nao_encontrada||0) === 1;
+            return [
+                fixText((item.representante||'-').substring(0,20)),
+                item.data_nf || '-',
+                item.nfe,
+                item.codigo,
+                fixText((item.descricao||'-').substring(0,80)),
+                fixText((item.cliente||'-').substring(0,22)),
+                'R$ ' + parseFloat(item.venda_net||0).toLocaleString('pt-BR',{minimumFractionDigits:2}),
+                semLista ? 'S/ Lista' : 'R$ ' + parseFloat(item.preco_lista_brl||0).toLocaleString('pt-BR',{minimumFractionDigits:2}),
+                semLista ? '-' : (parseFloat(item.desconto_pct||0)*100).toFixed(1) + '%',
+                semLista ? '-' : (parseFloat(item.comissao_final_pct||0)*100).toFixed(2) + '%',
+                semLista ? 'S/ Lista' : 'R$ ' + parseFloat(item.valor_comissao||0).toLocaleString('pt-BR',{minimumFractionDigits:2})
+            ];
+        });
 
         doc.autoTable({
             startY: 25,
@@ -767,14 +775,21 @@ require_once __DIR__ . '/header.php';
                 5: { cellWidth: 'auto' }, // Cliente
                 9: { halign: 'right' },   // % Final
                 10: { halign: 'right' }   // Comissão
+            },
+            didParseCell: (data) => {
+                // Destaca linhas S/Lista em cinza claro
+                if (data.row.raw && data.row.raw[7] === 'S/ Lista') {
+                    data.cell.styles.textColor = [120, 120, 120];
+                    data.cell.styles.fontStyle = 'italic';
+                }
             }
         });
 
         const filtroAtivo = document.querySelector('input[name=filtroStatus]:checked').value;
         const repSelect = document.getElementById('filtroRep');
         const selectedReps = Array.from(repSelect.selectedOptions).map(opt => opt.value).filter(val => val !== "");
-        const repFiltro = selectedReps.length ? selectedReps.join(', ') : 'Todos';
-        
+        const repFiltro = fixText(selectedReps.length ? selectedReps.join(', ') : 'Todos');
+
         doc.setFontSize(7);
         doc.text(`Filtro: Status=${filtroAtivo} | Representante=${repFiltro} | Total: ${filteredItems.length} itens`, 14, doc.lastAutoTable.finalY + 5);
 
@@ -960,9 +975,9 @@ require_once __DIR__ . '/header.php';
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
 
-        const batchNome = document.querySelector('h4.text-primary').textContent;
+        const batchNome = fixText(document.querySelector('h4.text-primary').textContent);
         doc.setFontSize(13);
-        doc.text("Relatório de Divergência de Embalagem — S/Lista", 14, 14);
+        doc.text("Relatorio de Divergencia de Embalagem - S/Lista", 14, 14);
         doc.setFontSize(10);
         doc.text(batchNome, 14, 20);
         doc.setFontSize(8);
@@ -970,12 +985,11 @@ require_once __DIR__ . '/header.php';
 
         const dados = itensDivergentesGlobais.map(item => [
             item.codigo,
-            (item.nome_produto || '-').substring(0, 40),
+            fixText((item.nome_produto || '-').substring(0, 40)),
             item.nfe || '-',
             item.embalagem_db || '-',
-            // Pega as embalagens disponiveis e junta com virgula
             item.opcoes_price_list.map(o => o.embalagem).join(', ') || '-',
-            (item.representante || '-').substring(0, 20)
+            fixText((item.representante || '-').substring(0, 20))
         ]);
 
         doc.autoTable({
@@ -1007,9 +1021,9 @@ require_once __DIR__ . '/header.php';
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
 
-        const batchNome = document.querySelector('h4.text-primary').textContent;
+        const batchNome = fixText(document.querySelector('h4.text-primary').textContent);
         doc.setFontSize(14);
-        doc.text('Resumo de Comissões por Representante', 14, 14);
+        doc.text('Resumo de Comissoes por Representante', 14, 14);
         doc.setFontSize(10);
         doc.text(batchNome, 14, 21);
         doc.setFontSize(8);
@@ -1038,7 +1052,7 @@ require_once __DIR__ . '/header.php';
         const linhas = Object.entries(grupos)
             .sort((a, b) => a[0].localeCompare(b[0]))
             .map(([rep, g]) => [
-                rep,
+                fixText(rep),
                 g.nfs.size,
                 fmtBRL(g.vendas),
                 fmtBRL(g.comissoes),
