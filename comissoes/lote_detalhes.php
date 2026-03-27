@@ -314,21 +314,33 @@ require_once __DIR__ . '/header.php';
         let y = 14, pageNum = 1;
 
         function cabecalho(first) {
-            // Faixa roxa InnovaSell
+            // Fundo Branco do cabeçalho
+            doc.setFillColor(255,255,255);
+            doc.rect(0, 0, PW, 14, 'F');
+            // Faixa roxa fina na base do cabeçalho
             doc.setFillColor(107,33,168);
-            doc.rect(0, 0, PW, 11, 'F');
-            // Faixa verde abaixo
-            doc.setFillColor(64,136,60);
-            doc.rect(0, 11, PW, 3.5, 'F');
-            doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(7.5);
-            doc.text('RELATORIO DE AUDITORIA DE COMISSOES', ML, 6.8);
-            doc.setFont('helvetica','normal'); doc.setFontSize(6.5);
-            doc.text('POP 10/2025 Rev.01  |  InnovaSell', ML, 10.5);
-            doc.text('Pag. ' + pageNum, PW-MR, 7, {align:'right'});
-            if (logoData) { doc.addImage(logoData, 'PNG', PW-MR-38, 0.5, 36, 10); }
+            doc.rect(0, 14, PW, 1, 'F');
+
+            // Textos alinhados à esquerda
+            doc.setTextColor(107,33,168); 
+            doc.setFont('helvetica','bold'); 
+            doc.setFontSize(10.5);
+            doc.text('RELATORIO DE AUDITORIA DE COMISSOES', ML, 8);
+            
+            doc.setTextColor(100,100,100); 
+            doc.setFont('helvetica','normal'); 
+            doc.setFontSize(7);
+            doc.text('POP 10/2025 Rev.01  |  InnovaSell', ML, 12);
+            
+            // Paginação ao lado direito, abaixo da logo
+            doc.text('Pag. ' + pageNum, PW-MR, 12.5, {align:'right'});
+            
+            // Logo na direita
+            if (logoData) { doc.addImage(logoData, 'PNG', PW-MR-36, 1.5, 36, 10); }
+            
             doc.setTextColor(0,0,0);
             if (first) {
-                y = 21;
+                y = 22;
                 doc.setFontSize(13); doc.setFont('helvetica','bold'); doc.setTextColor(107,33,168);
                 doc.text(batchNome, ML, y); y += 6;
                 doc.setFontSize(8); doc.setFont('helvetica','normal'); doc.setTextColor(80,80,80);
