@@ -330,7 +330,7 @@ require_once __DIR__ . '/header.php';
             doc.setTextColor(100,100,100); 
             doc.setFont('helvetica','normal'); 
             doc.setFontSize(7);
-            doc.text('POP 10/2025 Rev.01  |  InnovaSell', ML, 12);
+            doc.text('Doc. Base.: POP 10/2025 Rev.01  |  POLÍTICA DE COMISSIONAMENTO DE VENDAS', ML, 12);
             
             // Paginação ao lado direito, abaixo da logo
             doc.text('Pag. ' + pageNum, PW-MR, 12.5, {align:'right'});
@@ -340,7 +340,7 @@ require_once __DIR__ . '/header.php';
             
             doc.setTextColor(0,0,0);
             if (first) {
-                y = 22;
+                y = 55;
                 doc.setFontSize(13); doc.setFont('helvetica','bold'); doc.setTextColor(107,33,168);
                 doc.text(batchNome, ML, y); y += 6;
                 doc.setFontSize(8); doc.setFont('helvetica','normal'); doc.setTextColor(80,80,80);
