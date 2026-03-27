@@ -131,8 +131,8 @@ require_once __DIR__ . '/header.php';
                                 <th>Data / NF</th>
                                 <th>Código / Emb.</th>
                                 <th>Cliente</th>
-                                <th>Venda Net</th>
-                                <th>P.Lista(BRL)</th>
+                                <th>Net Unit. (Total)</th>
+                                <th>Lista (BRL)</th>
                                 <th>Desc%</th>
                                 <th>% Base</th>
                                 <th>PM(d)</th>
@@ -1176,8 +1176,8 @@ require_once __DIR__ . '/header.php';
             <td>${item.data_nf||'-'}<br><small class="text-muted">${item.nfe}</small></td>
             <td><b>${item.codigo}</b><br><small>${item.embalagem}</small></td>
             <td title="${item.cliente||''}">${item.cliente||'-'}</td>
-            <td>R$ ${fmtBRL(item.venda_net)}</td>
-            <td>R$ ${fmtBRL(item.preco_lista_brl)}</td>
+            <td><b>R$ ${parseFloat(item.preco_net_un||0).toLocaleString('pt-BR',{minimumFractionDigits:2, maximumFractionDigits:2})}</b><br><small class="text-muted">Tot: R$ ${fmtBRL(item.venda_net)}</small></td>
+            <td>R$ ${parseFloat(item.preco_lista_brl||0).toLocaleString('pt-BR',{minimumFractionDigits:2, maximumFractionDigits:2})}</td>
             <td>${fmtPct(item.desconto_pct)}</td>
             <td>${fmtPct(item.comissao_base_pct)}</td>
             <td>${Math.round(item.pm_dias||0)}d</td>
@@ -1396,7 +1396,7 @@ require_once __DIR__ . '/header.php';
         doc.setTextColor(0, 0, 0);
 
         // ── Colunas do autoTable ───────────────────────────────────────────────
-        const HEAD = [['Representante','Data','NF','Código','Produto','Cliente','Venda Net','Pricelist','Desc%','% Final','Comissão']];
+        const HEAD = [['Representante','Data','NF','Código','Produto','Cliente','Net Unit.','Pricelist','Desc%','% Final','Comissão']];
         const COL_STYLES = {
             4: { cellWidth: 'auto' }, // Produto
             5: { cellWidth: 'auto' }, // Cliente
@@ -1415,7 +1415,7 @@ require_once __DIR__ . '/header.php';
                 item.codigo,
                 fixText((item.descricao||'-').substring(0,80)),
                 fixText((item.cliente||'-').substring(0,22)),
-                'R$ ' + fmtBRL(item.venda_net),
+                'R$ ' + parseFloat(item.preco_net_un||0).toLocaleString('pt-BR',{minimumFractionDigits:2}) + '\n(Tot: R$ ' + fmtBRL(item.venda_net) + ')',
                 semLista ? 'S/ Lista' : 'R$ ' + parseFloat(item.preco_lista_brl||0).toLocaleString('pt-BR',{minimumFractionDigits:2}),
                 semLista ? '-' : (parseFloat(item.desconto_pct||0)*100).toFixed(1) + '%',
                 semLista ? '-' : (parseFloat(item.comissao_final_pct||0)*100).toFixed(2) + '%',
