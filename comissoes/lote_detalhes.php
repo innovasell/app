@@ -738,7 +738,7 @@ require_once __DIR__ . '/header.php';
             // ══════════════════════════════════════════════════
             // ETAPA 7 — Ajuste de Prazo
             // ══════════════════════════════════════════════════
-            etapaHeader(7, 'Ajuste da Comissão pelo Prazo Médio', 64,136,60);
+            etapaHeader(7, 'Ajuste da Comissão pelo Prazo Médio [v2]', 64,136,60);
             txt('A comissão base foi calculada assumindo um prazo padrão de 28 dias (4 semanas). Cada semana de diferença em relação a esse padrão ajusta a comissão em 0,05%:');
             checkY(12);
             doc.setFillColor(232,253,232);
