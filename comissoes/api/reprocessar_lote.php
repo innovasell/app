@@ -36,6 +36,9 @@ try {
     $batch = $stmtB->fetch(PDO::FETCH_ASSOC);
     if (!$batch) throw new Exception("Lote #{$batch_id} não encontrado.");
 
+    // Garante coluna ptax_nf (seguro repetir)
+    $pdo->exec("ALTER TABLE com_commission_items ADD COLUMN IF NOT EXISTS ptax_nf DECIMAL(10,4) NOT NULL DEFAULT 0");
+
     // Busca todos os itens do lote
     $stmtItems = $pdo->prepare("SELECT * FROM com_commission_items WHERE batch_id = ? ORDER BY id");
     $stmtItems->execute([$batch_id]);
@@ -125,6 +128,7 @@ try {
         $sem_lista        = (int)$item['lista_nao_encontrada'];
         $preco_lista_usd  = (float)($item['preco_lista_usd'] ?? 0);
         $preco_lista_brl  = (float)$item['preco_lista_brl'];
+        $ptax_nf          = (float)($item['ptax_nf'] ?? 0);
         $nfe_label        = $item['nfe'] . ' | ' . ($item['codigo'] ?? '') . ' ' . ($item['embalagem'] ?? '');
 
         // ── Itens sem lista e sem preço manual: ignorar ──────────────────────
@@ -140,15 +144,14 @@ try {
         }
 
         // ── Recalcula Preço Lista BRL ─────────────────────────────────────────
-        $ptax_usada  = null;
-        $ptax_fonte  = '';
+        // Prioridade PTAX: ptax_nf (DOLAR DO FATURAMENTO da infCpl) → BCB API
+        $ptax_usada = null;
 
         if ($preco_lista_usd > 0) {
-            // Tem USD → recalcula BRL com PTAX correta
-            $ptax_usada = getPtax($data_nf, $ptaxCache, $pdo);
+            // Tem USD → usa ptax_nf gravada no item; cai para BCB se não tiver
+            $ptax_usada = $ptax_nf > 0 ? $ptax_nf : getPtax($data_nf, $ptaxCache, $pdo);
             if ($ptax_usada) {
                 $preco_lista_brl = $preco_lista_usd * $ptax_usada;
-                $ptax_fonte = 'recalculado com PTAX ' . number_format($ptax_usada, 4, ',', '.');
             } else {
                 // Sem PTAX: preserva BRL atual, emite warning
                 $resultados['warnings'][] = [
@@ -160,7 +163,6 @@ try {
             }
         } else {
             // Sem USD (definido manualmente sem USD): preserva BRL que já foi editado
-            $ptax_fonte = 'BRL preservado (sem USD cadastrado)';
             if ($preco_lista_brl <= 0) {
                 $resultados['warnings'][] = [
                     'tipo'    => 'sem_preco',
@@ -186,8 +188,17 @@ try {
         }
 
         // ── Recalcula percentuais ─────────────────────────────────────────────
-        $desconto_brl = max(0, $preco_lista_brl - $preco_bruto_un);
-        $desconto_pct = $preco_lista_brl > 0 ? $desconto_brl / $preco_lista_brl : 0;
+        // Desconto em USD quando possível (mesmo dólar para venda e price list)
+        if ($preco_lista_usd > 0 && $ptax_usada > 0) {
+            $preco_bruto_usd = $preco_bruto_un / $ptax_usada;
+            $desconto_usd    = max(0, $preco_lista_usd - $preco_bruto_usd);
+            $desconto_pct    = $desconto_usd / $preco_lista_usd;
+            $desconto_brl    = $desconto_usd * $ptax_usada;
+        } else {
+            // Fallback BRL (itens sem USD ou sem PTAX)
+            $desconto_brl = max(0, $preco_lista_brl - $preco_bruto_un);
+            $desconto_pct = $preco_lista_brl > 0 ? $desconto_brl / $preco_lista_brl : 0;
+        }
         if ($desconto_pct < 0) $desconto_pct = 0;
 
         if      ($desconto_pct <= 0.00) $base = 0.0100;

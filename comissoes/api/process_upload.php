@@ -108,6 +108,9 @@ try {
         }
     }
 
+    // Garante coluna ptax_nf (executa uma única vez, seguro repetir)
+    $pdo->exec("ALTER TABLE com_commission_items ADD COLUMN IF NOT EXISTS ptax_nf DECIMAL(10,4) NOT NULL DEFAULT 0");
+
     // Cria lote em com_commission_batches
     $pdo->beginTransaction();
     $stmtBatch = $pdo->prepare("INSERT INTO com_commission_batches (periodo, nome) VALUES (?,?)");
@@ -122,8 +125,8 @@ try {
          qtde, valor_bruto, icms, pis, cofins, venda_net, preco_net_un, preco_lista_brl, preco_lista_usd,
          desconto_brl, desconto_pct, comissao_base_pct, pm_dias, pm_semanas,
          ajuste_prazo_pct, comissao_final_pct, valor_comissao, flag_aprovacao, flag_teto, lista_nao_encontrada,
-         vencimentos_json)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
+         vencimentos_json, ptax_nf)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
 
     $processedCount = 0;
     $importedCount  = 0;
@@ -314,10 +317,16 @@ try {
                 $warnItems[] = ['nfe' => $nfe_label, 'produto' => substr($xProd, 0, 50), 'avisos' => $itemWarnings];
             }
 
-            // Desconto
+            // Desconto — comparação em USD: converte preço bruto de venda para USD
             $preco_bruto_un = $qCom > 0 ? $valor_bruto / $qCom : 0;
             $desconto_brl = 0; $desconto_pct = 0;
-            if ($preco_lista_brl > 0) {
+            if ($preco_lista_usd > 0 && $ptax_usado > 0) {
+                $preco_bruto_usd = $preco_bruto_un / $ptax_usado;
+                $desconto_usd    = max(0, $preco_lista_usd - $preco_bruto_usd);
+                $desconto_pct    = $desconto_usd / $preco_lista_usd;
+                $desconto_brl    = $desconto_usd * $ptax_usado;
+            } elseif ($preco_lista_brl > 0) {
+                // Fallback BRL (sem PTAX disponível)
                 $desconto_brl = max(0, $preco_lista_brl - $preco_bruto_un);
                 $desconto_pct = $desconto_brl / $preco_lista_brl;
             }
@@ -359,7 +368,8 @@ try {
                 round($ajuste_prazo, 4), round($comissao_final, 4),
                 $valor_comissao, // ceil() já aplicado acima
                 $flag_aprovacao, $flag_teto, $lista_nao_encontrada,
-                $vencimentos_json_nf
+                $vencimentos_json_nf,
+                round($ptax_usado, 4)
             ]);
 
             $importedCount++;
