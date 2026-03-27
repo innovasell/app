@@ -319,7 +319,7 @@ require_once __DIR__ . '/header.php';
             doc.rect(0, 0, PW, 14, 'F');
             // Faixa roxa fina na base do cabeçalho
             doc.setFillColor(107,33,168);
-            doc.rect(0, 14, PW, 1, 'F');
+            doc.rect(0, 16, PW, 1, 'F');
 
             // Textos alinhados à esquerda
             doc.setTextColor(107,33,168); 
@@ -340,7 +340,7 @@ require_once __DIR__ . '/header.php';
             
             doc.setTextColor(0,0,0);
             if (first) {
-                y = 55;
+                y = 22;
                 doc.setFontSize(13); doc.setFont('helvetica','bold'); doc.setTextColor(107,33,168);
                 doc.text(batchNome, ML, y); y += 6;
                 doc.setFontSize(8); doc.setFont('helvetica','normal'); doc.setTextColor(80,80,80);
