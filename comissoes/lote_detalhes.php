@@ -340,7 +340,7 @@ require_once __DIR__ . '/header.php';
             
             doc.setTextColor(0,0,0);
             if (first) {
-                y = 22;
+                y = 25;
                 doc.setFontSize(13); doc.setFont('helvetica','bold'); doc.setTextColor(107,33,168);
                 doc.text(batchNome, ML, y); y += 6;
                 doc.setFontSize(8); doc.setFont('helvetica','normal'); doc.setTextColor(80,80,80);
