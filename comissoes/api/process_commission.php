@@ -494,8 +494,9 @@ try {
 
     ob_end_clean(); // descarta qualquer output acidental
     echo json_encode([
-        'success' => true, 
-        'batch_id' => $batchId, 
+        'success' => true,
+        'v' => '2',
+        'batch_id' => $batchId,
         'items_processed' => $itemsAdicionados,
         'items_ignored' => $itemsIgnorados,
         'ignore_reasons' => $motivosIgnorados
