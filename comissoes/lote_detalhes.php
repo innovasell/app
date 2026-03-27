@@ -462,6 +462,7 @@ require_once __DIR__ . '/header.php';
             const pl_brl          = parseFloat(item.preco_lista_brl||0);
             const pl_usd          = parseFloat(item.preco_lista_usd||0);
             const pnu             = parseFloat(item.preco_net_un||0);
+            const pbu             = qtde > 0 ? valorBruto / qtde : 0; // preço bruto unitário (vUnCom)
             const dsc_pct         = parseFloat(item.desconto_pct||0);
             const base_pct        = parseFloat(item.comissao_base_pct||0);
             const pm_dias         = parseFloat(item.pm_dias||0);
@@ -573,18 +574,20 @@ require_once __DIR__ . '/header.php';
             spacer(3);
 
             // ══════════════════════════════════════════════════
-            // ETAPA 5 — Price List, Preco Net Un e Desconto
+            // ETAPA 5 — Price List, Preco Bruto Un e Desconto
             // ══════════════════════════════════════════════════
-            etapaHeader(5, 'Price List, Preço Net Unitário e Desconto', 107, 33, 168);
+            etapaHeader(5, 'Price List, Preço Bruto Unitário e Desconto', 107, 33, 168);
             txt('Quanto maior o desconto que o representante concedeu ao cliente, menor será sua comissão. Esse mecanismo incentiva vendas pelo preço cheio de tabela. A lógica é simples: quem vende mais barato ganha menos comissão; quem vende pelo preço de catálogo ganha mais.');
             spacer(2);
 
-            // 5a — Preco Net Unitario
-            txt('5a)  Preço Net Unitário — quanto cada unidade foi vendida (líquida de impostos):', 0, true, 80,40,120);
-            txt('Dividimos a Venda Net pela quantidade para encontrar o preço real de cada unidade, descontados os impostos. Esse número será comparado com o preço de tabela (Price List) para calcular o desconto.');
+            // 5a — Preco Bruto Unitario
+            txt('5a)  Preço Bruto Unitário — quanto cada unidade foi faturada (antes dos impostos):', 0, true, 80,40,120);
+            txt('Dividimos o Valor Bruto da NF pela quantidade para encontrar o preço bruto de cada unidade (equivalente ao vUnCom do XML da NF-e). Esse valor será comparado com o preço de tabela (Price List) — ambos brutos — para calcular o desconto real concedido ao cliente.');
             spacer(1);
-            formula('Preço Net Unitário = Venda Net / Quantidade');
-            formula('Preço Net Unitário = R$ ' + fmtBRL(venda_net) + ' / ' + fmtN(qtde,4) + ' UN = R$ ' + fmtN(pnu,4));
+            formula('Preço Bruto Unitário = Valor Bruto / Quantidade');
+            formula('Preço Bruto Unitário = R$ ' + fmtBRL(valorBruto) + ' / ' + fmtN(qtde,4) + ' UN = R$ ' + fmtN(pbu,4));
+            spacer(1);
+            txt('O Preço Net Unitário (R$ ' + fmtN(pnu,4) + ') é usado apenas para calcular o valor da comissão sobre a venda líquida, não para o cálculo do desconto.');
             spacer(2);
 
             // 5b — Price List
@@ -612,10 +615,10 @@ require_once __DIR__ . '/header.php';
             if (!semLista) {
                 // 5c — Desconto
                 txt('5c)  Cálculo do Desconto:', 0, true, 80,40,120);
-                txt('Pense assim: se o preço de tabela é R$ 100 e o representante vendeu por R$ 80 (líquido de impostos), ele concedeu 20% de desconto ao cliente. Calculamos esse percentual para saber em qual faixa da tabela de comissão o item se enquadra.');
+                txt('Pense assim: se o preço de tabela é R$ 100 e o representante vendeu por R$ 80 brutos, ele concedeu 20% de desconto ao cliente. Comparamos preço bruto com preço de tabela (ambos brutos) para calcular o desconto real e determinar a faixa de comissão.');
                 spacer(1);
-                formula('Desconto % = (Preço Lista - Preço Net Un) / Preço Lista x 100');
-                formula('Desconto % = (R$ ' + fmtBRL(pl_brl) + ' - R$ ' + fmtN(pnu,4) + ') / R$ ' + fmtBRL(pl_brl) + ' x 100 = ' + fmtPct(dsc_pct,2));
+                formula('Desconto % = (Preço Lista - Preço Bruto Un) / Preço Lista x 100');
+                formula('Desconto % = (R$ ' + fmtBRL(pl_brl) + ' - R$ ' + fmtN(pbu,4) + ') / R$ ' + fmtBRL(pl_brl) + ' x 100 = ' + fmtPct(dsc_pct,2));
                 spacer(2);
 
                 // 5d — Tabela/Matriz

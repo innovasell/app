@@ -334,6 +334,7 @@ try {
         // Calcula net
         $venda_net = $valorBruto - $icms - $pis - $cofins;
         $preco_net_un = $qtde > 0 ? $venda_net / $qtde : 0;
+        $preco_bruto_un = $qtde > 0 ? $valorBruto / $qtde : 0; // preço bruto unitário (vUnCom) para comparação com price list
 
         // Limpa código (ex: 063004003) -> manter apenas os 9 digitos principais para a busca
         $codigo9 = substr($codigo, 0, 9);
@@ -425,9 +426,9 @@ try {
                 $preco_lista_brl = $preco_lista_usd * $ptax_usado;
             }
 
-            // Desconto = PrecoNET_UN - PrecoLista
+            // Desconto = PrecoBruto_UN vs PrecoLista (ambos brutos — base comparável)
             if ($preco_lista_brl > 0) {
-                $desconto_brl = $preco_lista_brl - $preco_net_un; // positivo=teve desconto
+                $desconto_brl = $preco_lista_brl - $preco_bruto_un; // positivo=teve desconto
                 $desconto_pct = $desconto_brl / $preco_lista_brl;
                 if ($desconto_pct < 0) $desconto_pct = 0;
             }
