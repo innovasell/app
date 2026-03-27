@@ -472,6 +472,7 @@ require_once __DIR__ . '/header.php';
             const comissao        = parseFloat(item.valor_comissao||0);
             const comissaoPreTeto = semLista ? 0 : venda_net * final_pct;
             const pmDif           = pm_dias - 28;
+            const diffSemanasInt  = Math.round(pmDif / 7); // semanas inteiras — política define ajuste por semana completa
 
             // ── Cabeçalho do item ──────────────────────────────────────────────────
             checkY(24);
@@ -731,7 +732,7 @@ require_once __DIR__ . '/header.php';
 
             kv('Prazo Médio calculado:', fmtN(pm_dias,0) + ' dias  =  ' + fmtN(pm_semanas,2) + ' semanas');
             kv('Prazo padrão de referência (baseline):', '28 dias  =  4,00 semanas');
-            kv('Diferença em relação ao baseline:', fmtN(pmDif,1) + ' dias  (' + fmtN(pmDif/7,2) + ' semanas)');
+            kv('Diferença em relação ao baseline:', fmtN(pmDif,1) + ' dias  (' + fmtN(pmDif/7,2) + ' semanas brutas  →  ' + diffSemanasInt + ' semanas inteiras)');
             spacer(3);
 
             // ══════════════════════════════════════════════════
@@ -748,14 +749,14 @@ require_once __DIR__ . '/header.php';
             doc.setFont('helvetica','normal'); doc.setTextColor(40,40,40);
             y += 12.5;
             spacer(1);
-            formula('Ajuste = -((PM - 28) / 7) x 0,05%');
-            formula('Ajuste = -((' + fmtN(pm_dias,0) + ' - 28) / 7) x 0,05%');
-            formula('Ajuste = -(' + fmtN(pmDif,1) + ' dias / 7) x 0,05%  =  -(' + fmtN(pmDif/7,4) + ' semanas) x 0,05%  =  ' + fmtPct(ajuste,4));
+            formula('Ajuste = -(arredondar((PM - 28) / 7)) x 0,05%');
+            formula('Ajuste = -(arredondar((' + fmtN(pm_dias,0) + ' - 28) / 7)) x 0,05%');
+            formula('Ajuste = -(arredondar(' + fmtN(pmDif/7,4) + ' semanas))  =  -(' + diffSemanasInt + ' semanas inteiras) x 0,05%  =  ' + fmtPct(ajuste,4));
             spacer(1);
-            if (Math.abs(pmDif) < 0.1) {
-                txt('Interpretação: O PM é exatamente igual ao padrão de 28 dias. Nenhum ajuste necessário — o ajuste é zero.', 0, false, 90,90,90);
+            if (diffSemanasInt === 0) {
+                txt('Interpretação: O PM resulta em 0 semanas de diferença após arredondamento. Nenhum ajuste necessário — o ajuste é zero.', 0, false, 90,90,90);
             } else {
-                txt('Interpretação: Como o prazo é ' + Math.abs(pmDif).toFixed(0) + ' dias ' + (pmDif > 0 ? 'a mais' : 'a menos') + ' que o padrão de 28 dias (' + Math.abs(pmDif/7).toFixed(2).replace('.',',') + ' semanas), a comissão é ' + (pmDif > 0 ? 'REDUZIDA' : 'AUMENTADA') + ' em ' + (Math.abs(ajuste)*100).toFixed(4).replace('.',',') + '%.', 0, false, 90,90,90);
+                txt('Interpretação: Como o prazo é ' + Math.abs(pmDif).toFixed(0) + ' dias ' + (pmDif > 0 ? 'a mais' : 'a menos') + ' que 28 dias (' + Math.abs(pmDif/7).toFixed(2).replace('.',',') + ' semanas → ' + Math.abs(diffSemanasInt) + ' semana(s) inteira(s)), a comissão é ' + (diffSemanasInt > 0 ? 'REDUZIDA' : 'AUMENTADA') + ' em ' + (Math.abs(diffSemanasInt) * 0.05).toFixed(2).replace('.',',') + '%.', 0, false, 90,90,90);
             }
             spacer(3);
 

@@ -451,11 +451,10 @@ try {
 
         // Calcula Ajuste do PM (Baseline 28d)
         $pm_semanas = $pm_dias / 7;
-        
-        $semanasAjuste = 0;
-        // Diferenca em semanas exatas (arredondado pra baixo ou float? Assumindo cálculo float/fracional ou semanas exatas, vamos pelo float)
-        $diffSemanas = ($pm_dias - 28) / 7;
-        $ajuste_prazo_pct = - ($diffSemanas * 0.0005); // -0.05% por semana a mais, +0.05% por semana a menos
+
+        // A política define ajuste por SEMANA INTEIRA — round para garantir resultado múltiplo de 0,05%
+        $diffSemanas = (int) round(($pm_dias - 28) / 7);
+        $ajuste_prazo_pct = -($diffSemanas * 0.0005); // -0,05% por semana a mais, +0,05% por semana a menos
 
         $comissao_final_pct = $comissao_base_pct + $ajuste_prazo_pct;
         if ($comissao_final_pct < 0.0005) {
