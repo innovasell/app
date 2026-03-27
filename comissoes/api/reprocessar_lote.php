@@ -118,6 +118,9 @@ try {
         $data_nf          = $item['data_nf'];
         $venda_net        = (float)$item['venda_net'];
         $preco_net_un     = (float)$item['preco_net_un'];
+        $qtde             = (float)$item['qtde'];
+        $valor_bruto      = (float)$item['valor_bruto'];
+        $preco_bruto_un   = $qtde > 0 ? $valor_bruto / $qtde : 0;
         $pm_dias          = (float)$item['pm_dias'];
         $sem_lista        = (int)$item['lista_nao_encontrada'];
         $preco_lista_usd  = (float)($item['preco_lista_usd'] ?? 0);
@@ -183,7 +186,7 @@ try {
         }
 
         // ── Recalcula percentuais ─────────────────────────────────────────────
-        $desconto_brl = max(0, $preco_lista_brl - $preco_net_un);
+        $desconto_brl = max(0, $preco_lista_brl - $preco_bruto_un);
         $desconto_pct = $preco_lista_brl > 0 ? $desconto_brl / $preco_lista_brl : 0;
         if ($desconto_pct < 0) $desconto_pct = 0;
 

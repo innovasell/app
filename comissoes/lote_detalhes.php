@@ -36,6 +36,21 @@ require_once __DIR__ . '/header.php';
     /* Toggle agrupamento */
     .btn-agrupar-nf { transition: all .2s; }
     .btn-agrupar-nf.active { background-color: #0047fa !important; color: #fff !important; border-color: #0047fa !important; }
+    /* Redimensionamento de colunas da Tabela */
+    table#tblLote, table#tblLote th, table#tblLote td {
+        box-sizing: border-box;
+    }
+    table#tblLote th {
+        resize: horizontal;
+        overflow: hidden;
+        position: relative;
+    }
+    table#tblLote td {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 180px;
+    }
 </style>
 
     <div class="container-fluid px-4 py-3">
@@ -1143,7 +1158,11 @@ require_once __DIR__ . '/header.php';
                 language: { url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/pt-BR.json' },
                 order: [[0, 'asc']],
                 pageLength: 50,
-                columnDefs: [{ targets: [-1], orderable: false }]
+                autoWidth: false,
+                columnDefs: [
+                    { targets: [-1], orderable: false },
+                    { targets: '_all', className: 'text-truncate' }
+                ]
             });
         }
     }
@@ -1156,7 +1175,7 @@ require_once __DIR__ . '/header.php';
             <td>${item.representante||'-'}</td>
             <td>${item.data_nf||'-'}<br><small class="text-muted">${item.nfe}</small></td>
             <td><b>${item.codigo}</b><br><small>${item.embalagem}</small></td>
-            <td title="${item.cliente||''}">${(item.cliente||'-').substring(0,25)}</td>
+            <td title="${item.cliente||''}">${item.cliente||'-'}</td>
             <td>R$ ${fmtBRL(item.venda_net)}</td>
             <td>R$ ${fmtBRL(item.preco_lista_brl)}</td>
             <td>${fmtPct(item.desconto_pct)}</td>

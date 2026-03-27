@@ -76,8 +76,12 @@ try {
         $venda_net      = (float)$row['venda_net'];
         $pm_dias        = (float)$row['pm_dias'];
         $preco_net_un   = (float)$row['preco_net_un'];
+        $qtde           = (float)$row['qtde'];
+        $valor_bruto    = (float)$row['valor_bruto'];
+        
+        $preco_bruto_un = $qtde > 0 ? $valor_bruto / $qtde : 0;
 
-        $desconto_brl = max(0, $precoBrl - $preco_net_un);
+        $desconto_brl = max(0, $precoBrl - $preco_bruto_un);
         $desconto_pct = $precoBrl > 0 ? $desconto_brl / $precoBrl : 0;
 
         $comissao_base_pct = 0.01;

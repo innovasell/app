@@ -315,9 +315,10 @@ try {
             }
 
             // Desconto
+            $preco_bruto_un = $qCom > 0 ? $valor_bruto / $qCom : 0;
             $desconto_brl = 0; $desconto_pct = 0;
             if ($preco_lista_brl > 0) {
-                $desconto_brl = max(0, $preco_lista_brl - $preco_net_un);
+                $desconto_brl = max(0, $preco_lista_brl - $preco_bruto_un);
                 $desconto_pct = $desconto_brl / $preco_lista_brl;
             }
 

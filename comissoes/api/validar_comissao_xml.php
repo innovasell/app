@@ -239,12 +239,13 @@ try {
         // Venda Net
         $venda_net   = $valor_bruto - $icms - $pis - $cofins;
         $preco_net_un = $qCom > 0 ? $venda_net / $qCom : 0;
+        $preco_bruto_un = $qCom > 0 ? $valor_bruto / $qCom : 0;
 
         // Desconto
         $desconto_brl = 0;
         $desconto_pct = 0;
         if ($preco_lista_brl > 0) {
-            $desconto_brl = $preco_lista_brl - $preco_net_un;
+            $desconto_brl = $preco_lista_brl - $preco_bruto_un;
             $desconto_pct = max(0, $desconto_brl / $preco_lista_brl);
         }
 
@@ -349,8 +350,8 @@ try {
                 'subtitulo' => 'E — Cálculo do Desconto',
                 'cor'       => 'danger',
                 'linhas'    => [
-                    "P.Lista BRL: R$ " . number_format($preco_lista_brl, 4, ',', '.') . " — P.Net Unitário: R$ " . number_format($preco_net_un, 4, ',', '.'),
-                    "Desconto BRL = Lista − Net = R$ " . number_format($desconto_brl, 4, ',', '.'),
+                    "P.Lista BRL: R$ " . number_format($preco_lista_brl, 4, ',', '.') . " — P.Bruto Unitário: R$ " . number_format($preco_bruto_un, 4, ',', '.'),
+                    "Desconto BRL = Lista − Bruto = R$ " . number_format($desconto_brl, 4, ',', '.'),
                     "Desconto % = Desc.BRL / P.Lista = <strong>" . number_format($desconto_pct * 100, 2, ',', '.') . "%</strong>",
                 ]
             ];

@@ -56,8 +56,11 @@ try {
         $preco_lista_brl= isset($body['preco_lista_brl'])? (float)$body['preco_lista_brl']: (float)$row['preco_lista_brl'];
         $pm_dias        = isset($body['pm_dias'])        ? (float)$body['pm_dias']        : (float)$row['pm_dias'];
         $preco_net_un   = isset($body['preco_net_un'])   ? (float)$body['preco_net_un']   : (float)$row['preco_net_un'];
+        $valor_bruto    = isset($body['valor_bruto'])    ? (float)$body['valor_bruto']    : (float)$row['valor_bruto'];
+        $qtde           = isset($body['qtde'])           ? (float)$body['qtde']           : (float)$row['qtde'];
 
-        $desconto_brl = max(0, $preco_lista_brl - $preco_net_un);
+        $preco_bruto_un = $qtde > 0 ? $valor_bruto / $qtde : 0;
+        $desconto_brl = max(0, $preco_lista_brl - $preco_bruto_un);
         $desconto_pct = $preco_lista_brl > 0 ? $desconto_brl / $preco_lista_brl : 0;
 
         $comissao_base_pct = 0.01;
