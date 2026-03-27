@@ -646,6 +646,67 @@ require_once __DIR__ . '/header.php';
             formula('PM = Soma(Dias_parcela_i x Valor_parcela_i) / Soma(Valor_parcela_i)');
             txt('Onde "i" representa cada duplicata diferente da NF. O resultado registrado para este item foi:', 0, false, 80,80,80);
             spacer(1);
+
+            // ── Tabela de duplicatas para auditoria do PM ─────────────────────
+            var dups = [];
+            try { dups = JSON.parse(item.vencimentos_json || '[]'); } catch(e) { dups = []; }
+            var colD = ML+5, colV = ML+80, colDias = ML+130;
+
+            if (dups.length > 0) {
+                // Cabeçalho da tabela
+                checkY(8);
+                doc.setFillColor(107,33,168);
+                doc.rect(ML+2, y, usableW-4, 6.5, 'F');
+                doc.setFont('helvetica','bold'); doc.setFontSize(6.8); doc.setTextColor(255,255,255);
+                var hasValor = dups.length > 0 && dups[0].valor !== undefined;
+                doc.text('Data Venc.', colD, y+4.5);
+                if (hasValor) doc.text('Valor (R$)', colV, y+4.5);
+                doc.text('Dias', colDias, y+4.5);
+                y += 6.5;
+
+                // Linhas de duplicatas
+                var somaP = 0, somaV = 0;
+                dups.forEach(function(d, idx) {
+                    checkY(6);
+                    doc.setFillColor(idx % 2 === 0 ? 248 : 240, idx % 2 === 0 ? 242 : 235, idx % 2 === 0 ? 255 : 248);
+                    doc.rect(ML+2, y, usableW-4, 5.8, 'F');
+                    doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor(40,40,40);
+                    doc.text(fixText(d.data || ''), colD, y+4);
+                    if (hasValor) {
+                        doc.text('R$ ' + fmtN(d.valor || 0, 2), colV, y+4);
+                        somaP += (d.dias || 0) * (d.valor || 0);
+                        somaV += (d.valor || 0);
+                    } else {
+                        somaP += (d.dias || 0);
+                        somaV += 1;
+                    }
+                    doc.text(fmtN(d.dias || 0, 0) + ' dias', colDias, y+4);
+                    y += 5.8;
+                });
+
+                // Linha de verificação (PM calculado a partir dos dados da tabela)
+                checkY(7);
+                var pmVerif = somaV > 0 ? somaP / somaV : 0;
+                doc.setFillColor(232,220,255);
+                doc.rect(ML+2, y, usableW-4, 6.5, 'F');
+                doc.setFont('helvetica','bold'); doc.setFontSize(6.8); doc.setTextColor(76,23,114);
+                if (hasValor) {
+                    doc.text('PM verificado (ponderado): ' + fmtN(pmVerif,1) + ' dias  —  Registrado: ' + fmtN(pm_dias,0) + ' dias', colD, y+4.3);
+                } else {
+                    doc.text('PM verificado (media simples): ' + fmtN(pmVerif,1) + ' dias  —  Registrado: ' + fmtN(pm_dias,0) + ' dias  (CSV: sem valor por parcela)', colD, y+4.3);
+                }
+                y += 7.5;
+            } else {
+                // Aviso para itens sem dados de duplicatas (importados antes da atualizacao)
+                checkY(9);
+                doc.setFillColor(255,243,205);
+                doc.rect(ML+2, y, usableW-4, 8, 'F');
+                doc.setFont('helvetica','normal'); doc.setFontSize(6.8); doc.setTextColor(130,80,0);
+                doc.text('Detalhe de duplicatas nao disponivel para este item (importado antes da atualizacao do sistema).', colD, y+5.2);
+                y += 9;
+            }
+            spacer(1);
+
             kv('Prazo Médio calculado:', fmtN(pm_dias,0) + ' dias  =  ' + fmtN(pm_semanas,2) + ' semanas');
             kv('Prazo padrão de referência (baseline):', '28 dias  =  4,00 semanas');
             kv('Diferença em relação ao baseline:', fmtN(pmDif,1) + ' dias  (' + fmtN(pmDif/7,2) + ' semanas)');

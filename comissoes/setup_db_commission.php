@@ -105,6 +105,12 @@ try {
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
     echo "Tabela 'com_commission_items' OK.<br>";
 
+    // v7: coluna de vencimentos para auditoria de PM (ignora se já existe)
+    try {
+        $pdo->exec("ALTER TABLE com_commission_items ADD COLUMN vencimentos_json TEXT NULL AFTER pm_semanas");
+        echo "Coluna 'vencimentos_json' adicionada.<br>";
+    } catch (PDOException $e) { echo "Coluna 'vencimentos_json' já existe (OK).<br>"; }
+
     echo "<h3>✅ Setup concluído com sucesso!</h3>";
     echo "<p><a href='comissoes.php'>→ Ir para o módulo de Comissões</a></p>";
 

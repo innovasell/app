@@ -160,8 +160,9 @@ try {
             $data_nf = "{$m[1]}-{$m[2]}-{$m[3]}";
         }
 
-        // Calcula PM
+        // Calcula PM e captura vencimentos para auditoria
         $pmDias = 0;
+        $vctoArr = [];
         if ($idxPedPm !== -1 && isset($row[$idxPedPm]) && trim($row[$idxPedPm]) !== '') {
             $pmDias = parseNumber($row[$idxPedPm]);
         } elseif ($idxPedVctos !== -1 && isset($row[$idxPedVctos]) && trim($row[$idxPedVctos]) !== '' && $data_nf) {
@@ -173,11 +174,12 @@ try {
             foreach ($vctos as $vctoTxt) {
                 $vctoTxt = trim($vctoTxt);
                 if (preg_match('/(\d{2})[\/\-](\d{2})[\/\-](\d{4})/', $vctoTxt, $m)) {
-                    $dtV = new DateTime("{$m[3]}-{$m[2]}-{$m[1]}");
-                    $diff = $dataBase->diff($dtV)->days;
+                    $dtV  = new DateTime("{$m[3]}-{$m[2]}-{$m[1]}");
+                    $diff = (int)$dataBase->diff($dtV)->days;
                     if ($dtV < $dataBase) $diff = -$diff;
                     $somaDias += $diff;
                     $qtdVctos++;
+                    $vctoArr[] = ['data' => $dtV->format('d/m/Y'), 'dias' => $diff];
                 }
             }
             if ($qtdVctos > 0) {
@@ -186,10 +188,11 @@ try {
         }
 
         $mapPedidos[$nfKey] = [
-            'data_nf'       => $data_nf,
-            'representante' => isset($row[$idxPedRep]) ? trim($row[$idxPedRep]) : '',
-            'cliente'       => isset($row[$idxPedCliente]) ? trim($row[$idxPedCliente]) : '',
-            'pm_dias'       => $pmDias
+            'data_nf'          => $data_nf,
+            'representante'    => isset($row[$idxPedRep]) ? trim($row[$idxPedRep]) : '',
+            'cliente'          => isset($row[$idxPedCliente]) ? trim($row[$idxPedCliente]) : '',
+            'pm_dias'          => $pmDias,
+            'vencimentos_json' => !empty($vctoArr) ? json_encode($vctoArr, JSON_UNESCAPED_UNICODE) : null
         ];
     }
 
@@ -221,13 +224,13 @@ try {
         throw new Exception("Colunas essenciais (Tipo, NF-e, Descrição) não encontradas nas Movimentações.");
     }
 
-    $stmtInsert = $pdo->prepare("INSERT INTO com_commission_items 
-        (batch_id, nfe, data_nf, cfop, codigo, descricao, embalagem, fabricante, representante, cliente, 
-         qtde, valor_bruto, icms, pis, cofins, venda_net, preco_net_un, preco_lista_brl, desconto_brl, 
-         desconto_pct, comissao_base_pct, pm_dias, pm_semanas, ajuste_prazo_pct, comissao_final_pct, 
-         valor_comissao, flag_aprovacao, flag_teto, lista_nao_encontrada)
-        VALUES 
-        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+    $stmtInsert = $pdo->prepare("INSERT INTO com_commission_items
+        (batch_id, nfe, data_nf, cfop, codigo, descricao, embalagem, fabricante, representante, cliente,
+         qtde, valor_bruto, icms, pis, cofins, venda_net, preco_net_un, preco_lista_brl, desconto_brl,
+         desconto_pct, comissao_base_pct, pm_dias, pm_semanas, ajuste_prazo_pct, comissao_final_pct,
+         valor_comissao, flag_aprovacao, flag_teto, lista_nao_encontrada, vencimentos_json)
+        VALUES
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
 
     $stmtPrice = $pdo->prepare("SELECT price_brl FROM cot_price_list WHERE codigo_produto = ? AND embalagem = ? ORDER BY id DESC LIMIT 1");
 
@@ -358,7 +361,8 @@ try {
         $representante = !empty($rep_mov) ? $rep_mov : ($pedData['representante'] ?? '');
         $cliente = !empty($cliente_mov) ? $cliente_mov : ($pedData['cliente'] ?? '');
         $data_nf = !empty($data_nf_mov) ? $data_nf_mov : ($pedData['data_nf'] ?? null);
-        $pm_dias = $pedData['pm_dias'] ?? 0;
+        $pm_dias          = $pedData['pm_dias'] ?? 0;
+        $vencimentos_json = $pedData['vencimentos_json'] ?? null;
 
         // Tenta buscar o preço de lista
         // (A cot_price_list costuma ter o codigo LIKE :cod e a embalagem EXATA)
@@ -478,9 +482,9 @@ try {
         $stmtInsert->execute([
             $batchId, $nfe, $data_nf, $cfop, $codigo9, $descricaoLimpa, $embalagem, $fabricante, $representante, $cliente,
             $qtde, $valorBruto, $icms, $pis, $cofins, $venda_net, cloneDecimal($preco_net_un), cloneDecimal($preco_lista_brl), cloneDecimal($desconto_brl),
-            cloneDecimal($desconto_pct), cloneDecimal($comissao_base_pct), cloneDecimal($pm_dias), cloneDecimal($pm_semanas), 
-            cloneDecimal($ajuste_prazo_pct), cloneDecimal($comissao_final_pct), cloneDecimal($valor_comissao), 
-            $flag_aprovacao, $flag_teto, $lista_nao_encontrada
+            cloneDecimal($desconto_pct), cloneDecimal($comissao_base_pct), cloneDecimal($pm_dias), cloneDecimal($pm_semanas),
+            cloneDecimal($ajuste_prazo_pct), cloneDecimal($comissao_final_pct), cloneDecimal($valor_comissao),
+            $flag_aprovacao, $flag_teto, $lista_nao_encontrada, $vencimentos_json
         ]);
 
         $itemsAdicionados++;

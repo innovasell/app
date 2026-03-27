@@ -121,8 +121,9 @@ try {
         (batch_id, nfe, data_nf, cfop, codigo, descricao, embalagem, fabricante, representante, cliente,
          qtde, valor_bruto, icms, pis, cofins, venda_net, preco_net_un, preco_lista_brl, preco_lista_usd,
          desconto_brl, desconto_pct, comissao_base_pct, pm_dias, pm_semanas,
-         ajuste_prazo_pct, comissao_final_pct, valor_comissao, flag_aprovacao, flag_teto, lista_nao_encontrada)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
+         ajuste_prazo_pct, comissao_final_pct, valor_comissao, flag_aprovacao, flag_teto, lista_nao_encontrada,
+         vencimentos_json)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
 
     $processedCount = 0;
     $importedCount  = 0;
@@ -174,23 +175,28 @@ try {
             ?? null;
         if ($sellerFromCsv) $representante = $sellerFromCsv;
 
-        // PM: calcula das duplicatas <cobr><dup>
+        // PM: calcula das duplicatas <cobr><dup> e preserva detalhes para auditoria
         $pm_dias = 0;
+        $vencimentosArr = [];
         $cobr = $infNFe->cobr ?? null;
         if ($cobr && $data_nf) {
-            $dups = $cobr->dup ?? [];
+            $dups   = $cobr->dup ?? [];
             $totalVal = 0; $somaP = 0;
+            $dtBase = new DateTime($data_nf);
             foreach ($dups as $dup) {
                 $dVenc = (string)($dup->dVenc ?? '');
                 $vDup  = (float)($dup->vDup ?? 0);
                 if ($dVenc && $vDup > 0) {
-                    $diff = (new DateTime($data_nf))->diff(new DateTime($dVenc))->days;
-                    $somaP += $diff * $vDup;
+                    $dtV  = new DateTime($dVenc);
+                    $diff = (int)$dtBase->diff($dtV)->days;
+                    $somaP    += $diff * $vDup;
                     $totalVal += $vDup;
+                    $vencimentosArr[] = ['data' => $dtV->format('d/m/Y'), 'valor' => $vDup, 'dias' => $diff];
                 }
             }
             if ($totalVal > 0) $pm_dias = $somaP / $totalVal;
         }
+        $vencimentos_json_nf = !empty($vencimentosArr) ? json_encode($vencimentosArr, JSON_UNESCAPED_UNICODE) : null;
 
         // ── Processa cada item <det> ──────────────────────────────────────────
         foreach ($infNFe->det as $det) {
@@ -350,7 +356,8 @@ try {
                 round($pm_dias_calc, 4), round($pm_semanas, 4),
                 round($ajuste_prazo, 4), round($comissao_final, 4),
                 round($valor_comissao, 2),
-                $flag_aprovacao, $flag_teto, $lista_nao_encontrada
+                $flag_aprovacao, $flag_teto, $lista_nao_encontrada,
+                $vencimentos_json_nf
             ]);
 
             $importedCount++;
