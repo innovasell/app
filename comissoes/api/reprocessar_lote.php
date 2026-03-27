@@ -195,7 +195,7 @@ try {
         else                            $base = 0.0025;
 
         $pm_semanas       = $pm_dias / 7;
-        $ajuste           = -(($pm_dias - 28) / 7 * 0.0005);
+        $ajuste           = -((int) round(($pm_dias - 28) / 7) * 0.0005); // semanas inteiras — múltiplo de 0,05%
         $comissao_final   = max(0.0005, $base + $ajuste);
 
         if ($preco_lista_brl <= 0) $comissao_final = 0;

@@ -267,7 +267,7 @@ try {
         }
 
         // Ajuste PM
-        $diff_semanas    = ($pm_dias - 28) / 7;
+        $diff_semanas    = (int) round(($pm_dias - 28) / 7); // semanas inteiras — múltiplo de 0,05%
         $ajuste_prazo    = -($diff_semanas * 0.0005);
         $comissao_final  = max(0.0005, $comissao_base_pct + $ajuste_prazo);
 

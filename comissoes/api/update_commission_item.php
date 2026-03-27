@@ -69,7 +69,7 @@ try {
         else                           $comissao_base_pct = 0.0025;
 
         $pm_semanas = $pm_dias / 7;
-        $ajuste_prazo_pct = -(($pm_dias - 28) / 7 * 0.0005);
+        $ajuste_prazo_pct = -((int) round(($pm_dias - 28) / 7) * 0.0005); // semanas inteiras — múltiplo de 0,05%
         $comissao_final_pct = max(0.0005, $comissao_base_pct + $ajuste_prazo_pct);
 
         if ($preco_lista_brl == 0) $comissao_final_pct = 0;
