@@ -79,6 +79,7 @@ try {
         if ($flag_teto) {
             $valor_comissao = 25000 + ($valor_comissao - 25000) * 0.10;
         }
+        $valor_comissao = ceil($valor_comissao); // Sempre inteiro, arredondado para cima
         $flag_aprovacao = ($desconto_pct > 0.20 || $pm_dias > 42) ? 1 : 0;
 
         $fields[] = "desconto_brl = ?";        $values[] = round($desconto_brl, 4);
@@ -87,7 +88,7 @@ try {
         $fields[] = "pm_semanas = ?";          $values[] = round($pm_semanas, 4);
         $fields[] = "ajuste_prazo_pct = ?";    $values[] = round($ajuste_prazo_pct, 4);
         $fields[] = "comissao_final_pct = ?";  $values[] = round($comissao_final_pct, 4);
-        $fields[] = "valor_comissao = ?";      $values[] = round($valor_comissao, 2);
+        $fields[] = "valor_comissao = ?";      $values[] = $valor_comissao; // ceil() já aplicado acima
         $fields[] = "flag_teto = ?";           $values[] = $flag_teto;
         $fields[] = "flag_aprovacao = ?";      $values[] = $flag_aprovacao;
         $fields[] = "lista_nao_encontrada = ?"; $values[] = ($preco_lista_brl == 0) ? 1 : 0;

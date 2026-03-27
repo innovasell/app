@@ -340,6 +340,7 @@ try {
             $valor_comissao = $venda_net * $comissao_final;
             $flag_teto      = $valor_comissao > 25000 ? 1 : 0;
             if ($flag_teto) $valor_comissao = 25000 + ($valor_comissao - 25000) * 0.10;
+            $valor_comissao = ceil($valor_comissao); // Sempre inteiro, arredondado para cima
             $flag_aprovacao = ($desconto_pct > 0.20 || $pm_dias_calc > 42) ? 1 : 0;
 
             // Fabricante
@@ -355,7 +356,7 @@ try {
                 round($comissao_base_pct, 4),
                 round($pm_dias_calc, 4), round($pm_semanas, 4),
                 round($ajuste_prazo, 4), round($comissao_final, 4),
-                round($valor_comissao, 2),
+                $valor_comissao, // ceil() já aplicado acima
                 $flag_aprovacao, $flag_teto, $lista_nao_encontrada,
                 $vencimentos_json_nf
             ]);

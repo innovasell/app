@@ -97,6 +97,7 @@ try {
         if ($flag_teto) {
             $valor_comissao = 25000 + ($valor_comissao - 25000) * 0.10;
         }
+        $valor_comissao = ceil($valor_comissao); // Sempre inteiro, arredondado para cima
         $flag_aprovacao = ($desconto_pct > 0.20 || $pm_dias > 42) ? 1 : 0;
 
         $upd = $pdo->prepare("UPDATE com_commission_items SET 
@@ -125,7 +126,7 @@ try {
             round($pm_semanas, 4),
             round($ajuste_prazo_pct, 4),
             round($comissao_final_pct, 4),
-            round($valor_comissao, 2),
+            $valor_comissao, // ceil() já aplicado acima
             $flag_teto,
             $flag_aprovacao,
             $id

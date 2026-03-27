@@ -205,6 +205,7 @@ try {
         if ($flag_teto) {
             $valor_comissao = 25000 + ($valor_comissao - 25000) * 0.10;
         }
+        $valor_comissao = ceil($valor_comissao); // Sempre inteiro, arredondado para cima
         $flag_aprov = ($desconto_pct > 0.20 || $pm_dias > 42) ? 1 : 0;
         $nova_sem_lista = ($preco_lista_brl <= 0) ? 1 : 0;
 
@@ -217,7 +218,7 @@ try {
             round($pm_semanas, 4),
             round($ajuste, 4),
             round($comissao_final, 4),
-            round($valor_comissao, 2),
+            $valor_comissao, // ceil() já aplicado acima
             $flag_aprov,
             $flag_teto,
             $nova_sem_lista,

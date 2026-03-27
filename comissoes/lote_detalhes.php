@@ -1000,7 +1000,7 @@ require_once __DIR__ . '/header.php';
         const cntTeto  = data.filter(i => i.flag_teto == 1).length;
         const cntSL    = data.filter(i => i.lista_nao_encontrada == 1).length;
 
-        const fmtBRL = v => v.toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
+        const fmtBRL = v => Math.ceil(v).toLocaleString('pt-BR', {style:'currency', currency:'BRL', minimumFractionDigits:0, maximumFractionDigits:0});
 
         document.getElementById('cardsResumo').innerHTML = `
             <div class="col-md-3 col-6 mb-2">
@@ -1045,7 +1045,7 @@ require_once __DIR__ . '/header.php';
     function renderTabela(data) {
         if (dtTable) { dtTable.destroy(); dtTable = null; }
 
-        const fmtBRL = v => parseFloat(v||0).toLocaleString('pt-BR', {minimumFractionDigits:2});
+        const fmtBRL = v => Math.ceil(parseFloat(v||0)).toLocaleString('pt-BR', {minimumFractionDigits:0, maximumFractionDigits:0});
         const fmtPct = v => (parseFloat(v||0)*100).toFixed(2) + '%';
 
         const tbody = document.getElementById('tbodyLote');
@@ -1142,7 +1142,8 @@ require_once __DIR__ . '/header.php';
         const final  = Math.max(0.0005, basePct + ajuste);
         const comissao = net * (lista > 0 ? final : 0);
         const teto = comissao > 25000;
-        const comissaoFinal = teto ? 25000 + (comissao - 25000) * 0.10 : comissao;
+        const comissaoCalculada = teto ? 25000 + (comissao - 25000) * 0.10 : comissao;
+        const comissaoFinal = Math.ceil(comissaoCalculada); // Sempre inteiro, arredondado para cima
 
         const fmtPct = v => (v*100).toFixed(2) + '%';
         const fmtBRL = v => v.toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
