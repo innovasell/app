@@ -332,9 +332,9 @@ try {
             elseif ($desconto_pct <= 0.20)       { $comissao_base_pct = 0.0040; }
             else                                  { $comissao_base_pct = 0.0025; }
 
-            // Ajuste PM
+            // Ajuste PM — semanas inteiras para garantir múltiplo de 0,05%
             $pm_semanas      = $pm_dias_calc / 7;
-            $ajuste_prazo    = -(($pm_dias_calc - 28) / 7 * 0.0005);
+            $ajuste_prazo    = -((int) round(($pm_dias_calc - 28) / 7) * 0.0005);
             $comissao_final  = max(0.0005, $comissao_base_pct + $ajuste_prazo);
             if ($lista_nao_encontrada) $comissao_final = 0;
 
