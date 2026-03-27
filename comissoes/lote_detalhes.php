@@ -1458,14 +1458,14 @@ require_once __DIR__ . '/header.php';
                 // Subtotal da NF
                 body.push([
                     { content: 'Subtotal NF ' + nfe, colSpan: 6,
-                      styles: { fontStyle: 'bold', fillColor: [64, 136, 60], textColor: 255, halign: 'right', fontSize: 7.5 } },
+                      styles: { fontStyle: 'bold', fillColor: [248, 249, 250], textColor: [73, 80, 87], halign: 'right', fontSize: 7.5 } },
                     { content: 'R$ ' + fmtBRL(netNF),
-                      styles: { fontStyle: 'bold', fillColor: [64, 136, 60], textColor: 255, halign: 'right' } },
-                    { content: '', styles: { fillColor: [64, 136, 60] } },
-                    { content: '', styles: { fillColor: [64, 136, 60] } },
-                    { content: '', styles: { fillColor: [64, 136, 60] } },
+                      styles: { fontStyle: 'bold', fillColor: [248, 249, 250], textColor: [73, 80, 87], halign: 'right' } },
+                    { content: '', styles: { fillColor: [248, 249, 250] } },
+                    { content: '', styles: { fillColor: [248, 249, 250] } },
+                    { content: '', styles: { fillColor: [248, 249, 250] } },
                     { content: 'R$ ' + fmtBRL(comNF),
-                      styles: { fontStyle: 'bold', fillColor: [64, 136, 60], textColor: 255, halign: 'right' } }
+                      styles: { fontStyle: 'bold', fillColor: [248, 249, 250], textColor: [73, 80, 87], halign: 'right' } }
                 ]);
             });
 
