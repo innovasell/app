@@ -31,7 +31,7 @@ require_once __DIR__ . '/header.php';
     @media print { .no-print { display:none!important; } body { font-size:0.75rem; } }
     /* Linhas de agrupamento por NF na tabela */
     tr.nf-group-header td { background: #e8f0ff !important; color: #0a1e42; font-weight: 700; font-size: 0.8rem; border-top: 2px solid #0047fa !important; letter-spacing: 0.02em; }
-    tr.nf-group-subtotal td { background: #d1f0d8 !important; color: #1a5c28; font-weight: 700; font-size: 0.8rem; border-bottom: 2px solid #40883c !important; }
+    tr.nf-group-subtotal td { background: #f8f9fa !important; color: #495057; font-weight: 600; font-size: 0.8rem; border-bottom: 1px solid #ced4da !important; }
     tr.nf-group-totalgeral td { background: #0a1e42 !important; color: #fff; font-weight: 700; font-size: 0.85rem; }
     /* Toggle agrupamento */
     .btn-agrupar-nf { transition: all .2s; }
