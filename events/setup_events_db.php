@@ -84,6 +84,30 @@ runSql($pdo, "CREATE TABLE IF NOT EXISTS evt_expenses (
     INDEX idx_data     (data_despesa)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci", "Tabela evt_expenses");
 
+// ── TABELA: evt_expense_parcelas ──────────────────────────────────────────────
+runSql($pdo, "CREATE TABLE IF NOT EXISTS evt_expense_parcelas (
+    id               INT AUTO_INCREMENT PRIMARY KEY,
+    expense_id       INT NOT NULL,
+    event_id         INT NOT NULL,
+    numero           SMALLINT NOT NULL DEFAULT 1,
+    vencimento       DATE NOT NULL,
+    valor            DECIMAL(15,2) NOT NULL,
+    status_pagamento ENUM('pendente','pago','cancelado') NOT NULL DEFAULT 'pendente',
+    data_pagamento   DATE NULL,
+    observacao       TEXT,
+    created_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (expense_id) REFERENCES evt_expenses(id) ON DELETE CASCADE,
+    INDEX idx_expense  (expense_id),
+    INDEX idx_event    (event_id),
+    INDEX idx_venc     (vencimento),
+    INDEX idx_status   (status_pagamento)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci", "Tabela evt_expense_parcelas");
+
+// ── ALTER: evt_expenses — adicionar flag parcelado ────────────────────────────
+runSql($pdo, "ALTER TABLE evt_expenses ADD COLUMN IF NOT EXISTS parcelado TINYINT(1) NOT NULL DEFAULT 0 AFTER status_pagamento",
+    "Coluna parcelado em evt_expenses");
+
 // ── ALTER: viagem_express_expenses ────────────────────────────────────────────
 runSql($pdo, "ALTER TABLE viagem_express_expenses
     ADD COLUMN IF NOT EXISTS event_id       INT NULL AFTER id,
