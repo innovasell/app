@@ -366,7 +366,7 @@ try {
                 round($comissao_base_pct, 4),
                 round($pm_dias_calc, 4), round($pm_semanas, 4),
                 round($ajuste_prazo, 4), round($comissao_final, 4),
-                $valor_comissao, // ceil() já aplicado acima
+                $valor_comissao, // round(,2) aplicado acima
                 $flag_aprovacao, $flag_teto, $lista_nao_encontrada,
                 $vencimentos_json_nf,
                 round($ptax_usado, 4)

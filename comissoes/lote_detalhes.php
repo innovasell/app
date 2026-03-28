@@ -487,7 +487,7 @@ require_once __DIR__ . '/header.php';
             const comissao        = parseFloat(item.valor_comissao||0);
             const comissaoPreTeto = semLista ? 0 : venda_net * final_pct;
             const pmDif           = pm_dias - 28;
-            const diffSemanasInt  = Math.round(pmDif / 7); // semanas inteiras — política define ajuste por semana completa
+            const semanas_int     = Math.floor(pm_dias / 7); // semanas completas por floor (3,9 = 3), baseline 4
 
             // ── Cabeçalho do item ──────────────────────────────────────────────────
             checkY(24);
@@ -747,31 +747,30 @@ require_once __DIR__ . '/header.php';
 
             kv('Prazo Médio calculado:', fmtN(pm_dias,0) + ' dias  =  ' + fmtN(pm_semanas,2) + ' semanas');
             kv('Prazo padrão de referência (baseline):', '28 dias  =  4,00 semanas');
-            kv('Diferença em relação ao baseline:', fmtN(pmDif,1) + ' dias  (' + fmtN(pmDif/7,2) + ' semanas brutas  →  ' + diffSemanasInt + ' semanas inteiras)');
+            kv('Semanas completas (floor):', 'floor(' + fmtN(pm_dias,1) + ' ÷ 7) = ' + semanas_int + ' semanas  (baseline: 4 semanas)');
             spacer(3);
 
             // ══════════════════════════════════════════════════
             // ETAPA 7 — Ajuste de Prazo
             // ══════════════════════════════════════════════════
-            etapaHeader(7, 'Ajuste da Comissão pelo Prazo Médio [v2]', 64,136,60);
-            txt('A comissão base foi calculada assumindo um prazo padrão de 28 dias (4 semanas). Cada semana de diferença em relação a esse padrão ajusta a comissão em 0,05%:');
+            etapaHeader(7, 'Ajuste da Comissão pelo Prazo Médio', 64,136,60);
+            txt('A comissão base usa baseline de 4 semanas (28 dias). Cada semana completa (floor) de diferença ajusta a comissão em 0,05%:');
             checkY(12);
             doc.setFillColor(232,253,232);
             doc.rect(ML+2, y, usableW-4, 11, 'F');
             doc.setFont('helvetica','normal'); doc.setFontSize(7.2); doc.setTextColor(30,80,20);
-            doc.text('Prazo maior que 28 dias  ->  ajuste NEGATIVO (comissão reduz):  cada semana a mais vale -0,05%', ML+5, y+4);
-            doc.text('Prazo menor que 28 dias  ->  ajuste POSITIVO (comissão aumenta): cada semana a menos vale +0,05%', ML+5, y+8.5);
+            doc.text('Mais de 4 semanas completas  ->  ajuste NEGATIVO (comissão reduz):  cada semana extra vale -0,05%', ML+5, y+4);
+            doc.text('Menos de 4 semanas completas ->  ajuste POSITIVO (comissão aumenta): cada semana a menos vale +0,05%', ML+5, y+8.5);
             doc.setFont('helvetica','normal'); doc.setTextColor(40,40,40);
             y += 12.5;
             spacer(1);
-            formula('Ajuste = -(arredondar((PM - 28) / 7)) x 0,05%');
-            formula('Ajuste = -(arredondar((' + fmtN(pm_dias,0) + ' - 28) / 7)) x 0,05%');
-            formula('Ajuste = -(arredondar(' + fmtN(pmDif/7,4) + ' semanas))  =  -(' + diffSemanasInt + ' semanas inteiras) x 0,05%  =  ' + fmtPct(ajuste,4));
+            formula('Ajuste = (4 - floor(PM / 7)) x 0,05%');
+            formula('Ajuste = (4 - floor(' + fmtN(pm_dias,1) + ' / 7)) x 0,05%  =  (4 - ' + semanas_int + ') x 0,05%  =  ' + fmtPct(ajuste,2));
             spacer(1);
-            if (diffSemanasInt === 0) {
-                txt('Interpretação: O PM resulta em 0 semanas de diferença após arredondamento. Nenhum ajuste necessário — o ajuste é zero.', 0, false, 90,90,90);
+            if (semanas_int === 4) {
+                txt('Interpretação: PM = 4 semanas completas = baseline. Nenhum ajuste necessário — o ajuste é zero.', 0, false, 90,90,90);
             } else {
-                txt('Interpretação: Como o prazo é ' + Math.abs(pmDif).toFixed(0) + ' dias ' + (pmDif > 0 ? 'a mais' : 'a menos') + ' que 28 dias (' + Math.abs(pmDif/7).toFixed(2).replace('.',',') + ' semanas → ' + Math.abs(diffSemanasInt) + ' semana(s) inteira(s)), a comissão é ' + (diffSemanasInt > 0 ? 'REDUZIDA' : 'AUMENTADA') + ' em ' + (Math.abs(diffSemanasInt) * 0.05).toFixed(2).replace('.',',') + '%.', 0, false, 90,90,90);
+                txt('Interpretação: ' + semanas_int + ' semanas completas vs baseline de 4. A comissão é ' + (semanas_int < 4 ? 'AUMENTADA' : 'REDUZIDA') + ' em ' + (Math.abs(4 - semanas_int) * 0.05).toFixed(2).replace('.',',') + '% (' + Math.abs(4 - semanas_int) + ' semana(s) ' + (semanas_int < 4 ? 'a menos' : 'a mais') + ' que o baseline).', 0, false, 90,90,90);
             }
             spacer(3);
 
@@ -1083,7 +1082,7 @@ require_once __DIR__ . '/header.php';
     function renderTabela(data) {
         if (dtTable) { dtTable.destroy(); dtTable = null; }
 
-        const fmtBRL = v => Math.ceil(parseFloat(v||0)).toLocaleString('pt-BR', {minimumFractionDigits:0, maximumFractionDigits:0});
+        const fmtBRL = v => parseFloat(v||0).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
         const fmtPct = v => (parseFloat(v||0)*100).toFixed(2) + '%';
         const agrupar = agruparNFAtivo();
 
@@ -1105,12 +1104,12 @@ require_once __DIR__ . '/header.php';
             });
 
             const totalNetGeral = data.reduce((s, i) => s + parseFloat(i.venda_net||0), 0);
-            const totalComGeral = data.reduce((s, i) => s + Math.ceil(parseFloat(i.valor_comissao||0)), 0);
+            const totalComGeral = data.reduce((s, i) => s + parseFloat(i.valor_comissao||0), 0);
 
             ordemNF.forEach(nfe => {
                 const itensNF = grupos[nfe];
                 const netNF   = itensNF.reduce((s, i) => s + parseFloat(i.venda_net||0), 0);
-                const comNF   = itensNF.reduce((s, i) => s + Math.ceil(parseFloat(i.valor_comissao||0)), 0);
+                const comNF   = itensNF.reduce((s, i) => s + parseFloat(i.valor_comissao||0), 0);
 
                 // Linha cabeçalho da NF
                 const trHead = document.createElement('tr');
@@ -1243,17 +1242,17 @@ require_once __DIR__ . '/header.php';
         const dscPct = lista > 0 ? dscBrl / lista : 0;
         let basePct = 0.0025;
         if (dscPct <= 0)        basePct = 0.0100;
-        else if (dscPct <= 0.05) basePct = 0.0090;
-        else if (dscPct <= 0.10) basePct = 0.0070;
-        else if (dscPct <= 0.15) basePct = 0.0050;
-        else if (dscPct <= 0.20) basePct = 0.0040;
+        else if (dscPct < 0.05) basePct = 0.0090;
+        else if (dscPct < 0.10) basePct = 0.0070;
+        else if (dscPct < 0.15) basePct = 0.0050;
+        else if (dscPct < 0.20) basePct = 0.0040;
 
-        const ajuste = -((pm - 28) / 7 * 0.0005);
+        const ajuste = (4 - Math.floor(pm / 7)) * 0.0005;
         const final  = Math.max(0.0005, basePct + ajuste);
         const comissao = net * (lista > 0 ? final : 0);
         const teto = comissao > 25000;
         const comissaoCalculada = teto ? 25000 + (comissao - 25000) * 0.10 : comissao;
-        const comissaoFinal = Math.ceil(comissaoCalculada); // Sempre inteiro, arredondado para cima
+        const comissaoFinal = Math.round(comissaoCalculada * 100) / 100; // Centavos — sem arredondamento para cima
 
         const fmtPct = v => (v*100).toFixed(2) + '%';
         const fmtBRL = v => v.toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
@@ -1355,7 +1354,7 @@ require_once __DIR__ . '/header.php';
         const repFiltro    = fixText(selectedReps.length ? selectedReps.join(', ') : 'Todos');
 
         // Formata BRL inteiro (ceil já aplicado no banco)
-        const fmtBRL = v => Math.ceil(parseFloat(v||0)).toLocaleString('pt-BR', {minimumFractionDigits:0, maximumFractionDigits:0});
+        const fmtBRL = v => parseFloat(v||0).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
 
         // ── Pré-carrega logo ──────────────────────────────────────────────────
         let logoData = null;
@@ -1425,7 +1424,7 @@ require_once __DIR__ . '/header.php';
 
         // ── Totais gerais ──────────────────────────────────────────────────────
         const totalNetGeral = filteredItems.reduce((s, i) => s + parseFloat(i.venda_net||0), 0);
-        const totalComGeral = filteredItems.reduce((s, i) => s + Math.ceil(parseFloat(i.valor_comissao||0)), 0);
+        const totalComGeral = filteredItems.reduce((s, i) => s + parseFloat(i.valor_comissao||0), 0);
 
         // ── Linha de rodapé total geral ────────────────────────────────────────
         const linhaTotal = (label) => [
@@ -1466,7 +1465,7 @@ require_once __DIR__ . '/header.php';
                 nfIdx++;
                 const itensNF = grupos[nfe];
                 const netNF   = itensNF.reduce((s, i) => s + parseFloat(i.venda_net||0), 0);
-                const comNF   = itensNF.reduce((s, i) => s + Math.ceil(parseFloat(i.valor_comissao||0)), 0);
+                const comNF   = itensNF.reduce((s, i) => s + parseFloat(i.valor_comissao||0), 0);
 
                 // Cabeçalho da NF (linha título)
                 body.push([
