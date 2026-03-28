@@ -219,7 +219,7 @@ try {
         if ($flag_teto) {
             $valor_comissao = 25000 + ($valor_comissao - 25000) * 0.10;
         }
-        $valor_comissao = ceil($valor_comissao); // Sempre inteiro, arredondado para cima
+        $valor_comissao = round($valor_comissao, 2); // Centavos — sem arredondamento para cima
         $flag_aprov = ($desconto_pct > 0.20 || $pm_dias > 42) ? 1 : 0;
         $nova_sem_lista = ($preco_lista_brl <= 0) ? 1 : 0;
 

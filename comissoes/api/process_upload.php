@@ -350,7 +350,7 @@ try {
             $valor_comissao = $venda_net * $comissao_final;
             $flag_teto      = $valor_comissao > 25000 ? 1 : 0;
             if ($flag_teto) $valor_comissao = 25000 + ($valor_comissao - 25000) * 0.10;
-            $valor_comissao = ceil($valor_comissao); // Sempre inteiro, arredondado para cima
+            $valor_comissao = round($valor_comissao, 2); // Centavos — sem arredondamento para cima
             $flag_aprovacao = ($desconto_pct > 0.20 || $pm_dias_calc > 42) ? 1 : 0;
 
             // Fabricante

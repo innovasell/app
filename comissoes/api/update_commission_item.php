@@ -81,7 +81,7 @@ try {
         if ($flag_teto) {
             $valor_comissao = 25000 + ($valor_comissao - 25000) * 0.10;
         }
-        $valor_comissao = ceil($valor_comissao); // Sempre inteiro, arredondado para cima
+        $valor_comissao = round($valor_comissao, 2); // Centavos — sem arredondamento para cima
         $flag_aprovacao = ($desconto_pct > 0.20 || $pm_dias > 42) ? 1 : 0;
 
         $fields[] = "desconto_brl = ?";        $values[] = round($desconto_brl, 4);
