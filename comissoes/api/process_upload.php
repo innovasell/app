@@ -335,15 +335,15 @@ try {
             if ($lista_nao_encontrada) {
                 $comissao_base_pct = 0;
             } elseif ($desconto_pct <= 0)       { $comissao_base_pct = 0.0100; }
-            elseif ($desconto_pct <= 0.05)       { $comissao_base_pct = 0.0090; }
-            elseif ($desconto_pct <= 0.10)       { $comissao_base_pct = 0.0070; }
-            elseif ($desconto_pct <= 0.15)       { $comissao_base_pct = 0.0050; }
-            elseif ($desconto_pct <= 0.20)       { $comissao_base_pct = 0.0040; }
-            else                                  { $comissao_base_pct = 0.0025; }
+            elseif ($desconto_pct < 0.05)       { $comissao_base_pct = 0.0090; }
+            elseif ($desconto_pct < 0.10)       { $comissao_base_pct = 0.0070; }
+            elseif ($desconto_pct < 0.15)       { $comissao_base_pct = 0.0050; }
+            elseif ($desconto_pct < 0.20)       { $comissao_base_pct = 0.0040; }
+            else                                { $comissao_base_pct = 0.0025; }
 
-            // Ajuste PM — semanas inteiras para garantir múltiplo de 0,05%
+            // Ajuste PM — semanas completas por floor (3,9 semanas = 3), baseline 4 semanas = 0%
             $pm_semanas      = $pm_dias_calc / 7;
-            $ajuste_prazo    = -((int) round(($pm_dias_calc - 28) / 7) * 0.0005);
+            $ajuste_prazo    = (4 - (int) floor($pm_dias_calc / 7)) * 0.0005;
             $comissao_final  = max(0.0005, $comissao_base_pct + $ajuste_prazo);
             if ($lista_nao_encontrada) $comissao_final = 0;
 

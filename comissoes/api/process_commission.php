@@ -436,25 +436,24 @@ try {
             // Matriz %
             if ($desconto_pct <= 0) {
                 $comissao_base_pct = 0.0100; // 1%
-            } elseif ($desconto_pct <= 0.05) {
+            } elseif ($desconto_pct < 0.05) {
                 $comissao_base_pct = 0.0090; // 0.9%
-            } elseif ($desconto_pct <= 0.10) {
+            } elseif ($desconto_pct < 0.10) {
                 $comissao_base_pct = 0.0070; // 0.7%
-            } elseif ($desconto_pct <= 0.15) {
+            } elseif ($desconto_pct < 0.15) {
                 $comissao_base_pct = 0.0050; // 0.5%
-            } elseif ($desconto_pct <= 0.20) {
+            } elseif ($desconto_pct < 0.20) {
                 $comissao_base_pct = 0.0040; // 0.4%
             } else {
-                $comissao_base_pct = 0.0025; // 0.25% (acima 20%)
+                $comissao_base_pct = 0.0025; // 0.25% (20% ou acima)
             }
         }
 
         // Calcula Ajuste do PM (Baseline 28d)
         $pm_semanas = $pm_dias / 7;
 
-        // A política define ajuste por SEMANA INTEIRA — round para garantir resultado múltiplo de 0,05%
-        $diffSemanas = (int) round(($pm_dias - 28) / 7);
-        $ajuste_prazo_pct = -($diffSemanas * 0.0005); // -0,05% por semana a mais, +0,05% por semana a menos
+        // Semanas completas por floor (3,9 = 3 semanas), baseline 4 semanas = 0% ajuste
+        $ajuste_prazo_pct = (4 - (int) floor($pm_dias / 7)) * 0.0005;
 
         $comissao_final_pct = $comissao_base_pct + $ajuste_prazo_pct;
         if ($comissao_final_pct < 0.0005) {

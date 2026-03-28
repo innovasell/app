@@ -254,22 +254,22 @@ try {
             $comissao_base_pct = 0;
             $regra_aplicada = 'Sem Price List — não é possível calcular';
         } elseif ($desconto_pct <= 0) {
-            $comissao_base_pct = 0.0100; $regra_aplicada = 'Desconto ≤ 0% → 1,00%';
-        } elseif ($desconto_pct <= 0.05) {
-            $comissao_base_pct = 0.0090; $regra_aplicada = 'Desconto ≤ 5% → 0,90%';
-        } elseif ($desconto_pct <= 0.10) {
-            $comissao_base_pct = 0.0070; $regra_aplicada = 'Desconto ≤ 10% → 0,70%';
-        } elseif ($desconto_pct <= 0.15) {
-            $comissao_base_pct = 0.0050; $regra_aplicada = 'Desconto ≤ 15% → 0,50%';
-        } elseif ($desconto_pct <= 0.20) {
-            $comissao_base_pct = 0.0040; $regra_aplicada = 'Desconto ≤ 20% → 0,40%';
+            $comissao_base_pct = 0.0100; $regra_aplicada = 'Sem desconto → 1,00%';
+        } elseif ($desconto_pct < 0.05) {
+            $comissao_base_pct = 0.0090; $regra_aplicada = 'Desconto < 5% → 0,90%';
+        } elseif ($desconto_pct < 0.10) {
+            $comissao_base_pct = 0.0070; $regra_aplicada = 'Desconto 5% a 9,99% → 0,70%';
+        } elseif ($desconto_pct < 0.15) {
+            $comissao_base_pct = 0.0050; $regra_aplicada = 'Desconto 10% a 14,99% → 0,50%';
+        } elseif ($desconto_pct < 0.20) {
+            $comissao_base_pct = 0.0040; $regra_aplicada = 'Desconto 15% a 19,99% → 0,40%';
         } else {
-            $comissao_base_pct = 0.0025; $regra_aplicada = 'Desconto > 20% → 0,25% ⚠️ Requer aprovação';
+            $comissao_base_pct = 0.0025; $regra_aplicada = 'Desconto ≥ 20% → 0,25% ⚠️ Requer aprovação';
         }
 
-        // Ajuste PM
-        $diff_semanas    = (int) round(($pm_dias - 28) / 7); // semanas inteiras — múltiplo de 0,05%
-        $ajuste_prazo    = -($diff_semanas * 0.0005);
+        // Ajuste PM — semanas completas por floor (3,9 = 3), baseline 4 semanas
+        $semanas_int     = (int) floor($pm_dias / 7);
+        $ajuste_prazo    = (4 - $semanas_int) * 0.0005;
         $comissao_final  = max(0.0005, $comissao_base_pct + $ajuste_prazo);
 
         if ($lista_nao_encontrada) $comissao_final = 0;
@@ -374,8 +374,8 @@ try {
             'cor'       => 'secondary',
             'linhas'    => [
                 "PM: <strong>" . number_format($pm_dias, 1, ',', '.') . " dias</strong> — Fonte: {$pm_fonte}",
-                "Baseline: 28 dias. Diferença: " . number_format($pm_dias - 28, 1, ',', '.') . " dias = " . number_format($diff_semanas, 2, ',', '.') . " semanas",
-                "Ajuste = −(semanas × 0,05%) = <strong>" . number_format($ajuste_prazo * 100, 4, ',', '.') . "%</strong> " . ($ajuste_prazo >= 0 ? "<span class='text-success'>(bônus por prazo curto)</span>" : "<span class='text-danger'>(penalidade por prazo longo)</span>"),
+                "Semanas completas: floor(" . number_format($pm_dias, 1, ',', '.') . " ÷ 7) = <strong>{$semanas_int}</strong> semanas (baseline: 4). Ajuste = (4 − {$semanas_int}) × 0,05%",
+                "Ajuste = <strong>" . number_format($ajuste_prazo * 100, 2, ',', '.') . "%</strong> " . ($ajuste_prazo > 0 ? "<span class='text-success'>(bônus por prazo curto)</span>" : ($ajuste_prazo < 0 ? "<span class='text-danger'>(penalidade por prazo longo)</span>" : "(sem ajuste — 4 semanas)")),
                 "% Final = Base + Ajuste = " . number_format($comissao_base_pct * 100, 2, ',', '.') . "% + (" . number_format($ajuste_prazo * 100, 4, ',', '.') . "%) = <strong class='text-primary'>" . number_format($comissao_final * 100, 4, ',', '.') . "%</strong>",
             ]
         ];

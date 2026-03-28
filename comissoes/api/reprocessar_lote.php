@@ -202,14 +202,14 @@ try {
         if ($desconto_pct < 0) $desconto_pct = 0;
 
         if      ($desconto_pct <= 0.00) $base = 0.0100;
-        elseif  ($desconto_pct <= 0.05) $base = 0.0090;
-        elseif  ($desconto_pct <= 0.10) $base = 0.0070;
-        elseif  ($desconto_pct <= 0.15) $base = 0.0050;
-        elseif  ($desconto_pct <= 0.20) $base = 0.0040;
-        else                            $base = 0.0025;
+        elseif  ($desconto_pct < 0.05)  $base = 0.0090;
+        elseif  ($desconto_pct < 0.10)  $base = 0.0070;
+        elseif  ($desconto_pct < 0.15)  $base = 0.0050;
+        elseif  ($desconto_pct < 0.20)  $base = 0.0040;
+        else                             $base = 0.0025;
 
         $pm_semanas       = $pm_dias / 7;
-        $ajuste           = -((int) round(($pm_dias - 28) / 7) * 0.0005); // semanas inteiras — múltiplo de 0,05%
+        $ajuste           = (4 - (int) floor($pm_dias / 7)) * 0.0005; // semanas completas (floor), baseline 4
         $comissao_final   = max(0.0005, $base + $ajuste);
 
         if ($preco_lista_brl <= 0) $comissao_final = 0;
