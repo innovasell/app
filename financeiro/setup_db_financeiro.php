@@ -65,6 +65,14 @@ try {
     $pdo->exec($sqlItens);
     echo "Tabela 'fin_itens' verificada/criada com sucesso.<br>";
 
+    // Adicionar coluna tipo em fin_notas (idempotente)
+    try {
+        $pdo->exec("ALTER TABLE fin_notas ADD COLUMN tipo ENUM('entrada','saida') NOT NULL DEFAULT 'entrada' AFTER lote_id");
+        echo "Coluna 'tipo' adicionada à 'fin_notas' com sucesso.<br>";
+    } catch (PDOException $e) {
+        echo "Coluna 'tipo' já existe em 'fin_notas' (ok).<br>";
+    }
+
     echo "<br><b>Instalação concluída com sucesso!</b>";
 
 } catch (PDOException $e) {

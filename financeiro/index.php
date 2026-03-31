@@ -53,6 +53,21 @@ require_once __DIR__ . '/header.php';
                 <div class="card-body d-flex flex-column justify-content-center">
                     
                     <form id="uploadForm" enctype="multipart/form-data">
+                        <!-- Seletor Tipo de NF-e -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold small text-muted mb-1"><i class="fas fa-exchange-alt me-1"></i> Tipo de NF-e</label>
+                            <div class="btn-group w-100" role="group">
+                                <input type="radio" class="btn-check" name="tipo_nfe" id="tipoEntrada" value="entrada" checked>
+                                <label class="btn btn-outline-primary fw-bold" for="tipoEntrada">
+                                    <i class="fas fa-file-import me-1"></i> Entrada
+                                </label>
+                                <input type="radio" class="btn-check" name="tipo_nfe" id="tipoSaida" value="saida">
+                                <label class="btn btn-outline-success fw-bold" for="tipoSaida">
+                                    <i class="fas fa-file-export me-1"></i> Saída
+                                </label>
+                            </div>
+                        </div>
+                        <input type="hidden" id="tipoNFe" value="entrada">
                         <div class="upload-area mb-3" id="dropZone" onclick="document.getElementById('fileZip').click()">
                             <i class="fas fa-file-archive"></i>
                             <h5 class="text-success">Arraste um .zip aqui</h5>
@@ -149,16 +164,13 @@ require_once __DIR__ . '/header.php';
             <table id="tblNFs" class="table table-hover table-bordered w-100">
                 <thead>
                     <tr>
+                        <th width="75">Tipo</th>
                         <th width="80">Nº NF</th>
                         <th>Emitente</th>
+                        <th>Destinatário</th>
                         <th width="100">Emissão</th>
-                        <th width="70">Qtd Item</th>
-                        <th width="110">Tot Produtos</th>
-                        <th width="110">Tot PIS</th>
-                        <th width="110">Tot COFINS</th>
-                        <th width="110">Tot ICMS</th>
-                        <th width="110">Tot IPI</th>
-                        <th width="120">Total NF</th>
+                        <th width="60">Itens</th>
+                        <th width="130">Total NF</th>
                     </tr>
                 </thead>
                 <tbody></tbody>
@@ -182,12 +194,17 @@ $(document).ready(function() {
     // Tabela Init DataTables
     const table = $('#tblNFs').DataTable({
         language: { url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/pt-BR.json' },
-        order: [[2, 'desc']], // Emissao
+        order: [[4, 'desc']], // Emissao
         pageLength: 25,
         columnDefs: [
-            { className: "text-end", targets: [4,5,6,7,8,9] },
-            { className: "text-center", targets: [0, 2, 3] }
+            { className: "text-end",   targets: [6] },
+            { className: "text-center", targets: [0, 1, 4, 5] }
         ]
+    });
+
+    // Sincronizar hidden tipo com os radio buttons
+    $('input[name="tipo_nfe"]').on('change', function() {
+        $('#tipoNFe').val($(this).val());
     });
 
     let currentFile = null;
@@ -263,6 +280,7 @@ $(document).ready(function() {
 
         const formData = new FormData($('#uploadForm')[0]);
         formData.append('regime', $('#regimeSelect').val());
+        formData.append('tipo', $('#tipoNFe').val());
 
         const $btn = $(this);
         const logBox = $('#logOutput');
@@ -313,16 +331,17 @@ $(document).ready(function() {
                     // Render NFs no datatable
                     if (res.nfs && res.nfs.length > 0) {
                         res.nfs.forEach(nf => {
+                            const isSaida = nf.tipo === 'saida';
+                            const tipoBadge = isSaida
+                                ? '<span class="badge bg-success">Saída</span>'
+                                : '<span class="badge bg-primary">Entrada</span>';
                             table.row.add([
+                                tipoBadge,
                                 `<b>${nf.nNF}</b>`,
                                 `<span title="${nf.cnpj_emit}">${nf.nome_emit}</span>`,
+                                `<span title="${nf.cnpj_dest}">${nf.nome_dest}</span>`,
                                 nf.dhEmi.split('-').reverse().join('/'),
                                 nf.qtd_itens,
-                                formatMoney(nf.v_prod),
-                                formatMoney(nf.v_pis),
-                                formatMoney(nf.v_cofins),
-                                formatMoney(nf.v_icms),
-                                formatMoney(nf.v_ipi),
                                 `<b>${formatMoney(nf.v_nf)}</b>`
                             ]);
                         });
