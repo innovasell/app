@@ -21,7 +21,39 @@ require_once 'conexao.php';
         .btn-success-custom { background-color: #40883c; border-color: #40883c; color: #fff; }
         .btn-success-custom:hover { background-color: #2c5e29; border-color: #2c5e29; color: #fff; }
         #alertBox { display: none; }
-        .stat-badge { font-size: 0.85rem; padding: 6px 14px; border-radius: 8px; }
+
+        /* ── Stat Pills ─────────────────────────────── */
+        .stat-pill {
+            display: inline-flex; align-items: center; gap: 4px;
+            font-size: 0.78rem; font-weight: 600;
+            padding: 4px 12px; border-radius: 20px;
+        }
+        .stat-pill-blue   { background: #e8f0fe; color: #1a56db; }
+        .stat-pill-gray   { background: #f1f3f5; color: #495057; }
+        .stat-pill-indigo { background: #ede9fe; color: #5521b5; }
+        .stat-pill-light  { background: #f8f9fa; color: #6c757d; border: 1px solid #dee2e6; }
+
+        /* ── Split Action Buttons ───────────────────── */
+        .btn-action-main {
+            font-size: 0.82rem; font-weight: 600;
+            padding: 8px 16px; border-radius: 8px 0 0 8px !important;
+            letter-spacing: 0.2px;
+        }
+        .btn-action-caret {
+            padding: 8px 10px; border-radius: 0 8px 8px 0 !important;
+            border-left: 1px solid rgba(255,255,255,0.25) !important;
+        }
+        .btn-action-massa {
+            background: linear-gradient(135deg, #e67e00, #f59f00);
+            border-color: #e67e00; color: #fff;
+        }
+        .btn-action-massa:hover, .btn-action-massa:focus {
+            background: linear-gradient(135deg, #cc6f00, #e08c00);
+            border-color: #cc6f00; color: #fff;
+        }
+        .dropdown-menu { border-radius: 10px; font-size: 0.84rem; min-width: 200px; }
+        .dropdown-item { border-radius: 6px; margin: 2px 4px; width: calc(100% - 8px); }
+        .dropdown-item:hover { background-color: #f0f4f8; }
     </style>
 </head>
 <body>
@@ -46,41 +78,91 @@ require_once 'conexao.php';
         <div class="alert alert-danger alert-dismissible fade show"><i class="fas fa-times-circle me-2"></i><?= htmlspecialchars($_GET['erro']) ?> <button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
     <?php endif; ?>
 
-    <!-- Linha de ações e estatísticas -->
-    <div class="row mb-3 align-items-center">
-        <div class="col-auto">
-            <h4 class="fw-bold mb-0 text-dark"><i class="fas fa-tags me-2 text-success"></i>Gerenciar Price List</h4>
+    <?php
+    try {
+        $total       = $pdo->query("SELECT COUNT(*) FROM cot_price_list")->fetchColumn();
+        $fabricantes = $pdo->query("SELECT COUNT(DISTINCT fabricante) FROM cot_price_list")->fetchColumn();
+        $codigos     = $pdo->query("SELECT COUNT(DISTINCT codigo) FROM cot_price_list")->fetchColumn();
+        $lastUpload  = file_exists('last_upload_price_list.txt') ? file_get_contents('last_upload_price_list.txt') : '—';
+    } catch (Exception $e) { $total = $fabricantes = $codigos = 0; $lastUpload = '—'; }
+    ?>
+
+    <!-- Toolbar principal -->
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4 px-4 py-3 bg-white rounded-3 shadow-sm">
+
+        <!-- Título + Stats -->
+        <div>
+            <h5 class="fw-bold mb-2 text-dark d-flex align-items-center gap-2">
+                <i class="fas fa-tags text-success"></i> Gerenciar Price List
+            </h5>
+            <div class="d-flex flex-wrap align-items-center gap-2">
+                <span class="stat-pill stat-pill-blue"><i class="fas fa-box me-1"></i><?= number_format($total) ?> itens</span>
+                <span class="stat-pill stat-pill-gray"><i class="fas fa-industry me-1"></i><?= $fabricantes ?> fabricantes</span>
+                <span class="stat-pill stat-pill-indigo"><i class="fas fa-barcode me-1"></i><?= $codigos ?> códigos únicos</span>
+                <span class="stat-pill stat-pill-light"><i class="fas fa-clock me-1"></i><?= htmlspecialchars($lastUpload) ?></span>
+            </div>
         </div>
-        <div class="col">
-            <?php
-            try {
-                $total      = $pdo->query("SELECT COUNT(*) FROM cot_price_list")->fetchColumn();
-                $fabricantes = $pdo->query("SELECT COUNT(DISTINCT fabricante) FROM cot_price_list")->fetchColumn();
-                $codigos    = $pdo->query("SELECT COUNT(DISTINCT codigo) FROM cot_price_list")->fetchColumn();
-                $lastUpload = file_exists('last_upload_price_list.txt') ? file_get_contents('last_upload_price_list.txt') : '—';
-            } catch (Exception $e) { $total = $fabricantes = $codigos = 0; $lastUpload = '—'; }
-            ?>
-            <span class="badge bg-primary stat-badge me-1"><i class="fas fa-box me-1"></i><?= number_format($total) ?> itens</span>
-            <span class="badge bg-secondary stat-badge me-1"><i class="fas fa-industry me-1"></i><?= $fabricantes ?> fabricantes</span>
-            <span class="badge bg-info text-dark stat-badge me-1"><i class="fas fa-barcode me-1"></i><?= $codigos ?> códigos únicos</span>
-            <span class="badge bg-light text-muted stat-badge border"><i class="fas fa-clock me-1"></i>Atualizado: <?= htmlspecialchars($lastUpload) ?></span>
-        </div>
-        <div class="col-auto d-flex gap-2">
-            <a href="download_template_price_list.php" class="btn btn-outline-success btn-sm">
-                <i class="fas fa-file-csv me-1"></i> Modelo CSV.
-            </a>
-            <a href="exportar_price_list.php" class="btn btn-outline-info btn-sm text-dark border-info">
-                <i class="fas fa-download me-1"></i> Exportar CSV
-            </a>
-            <button class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalAdd">
-                <i class="fas fa-plus me-1"></i> Novo Item
-            </button>
-            <button class="btn btn-sm btn-outline-warning fw-bold" data-bs-toggle="modal" data-bs-target="#modalAddMassa">
-                <i class="fas fa-layer-group me-1"></i> Adição em Massa
-            </button>
-            <button class="btn btn-sm btn-success-custom" data-bs-toggle="modal" data-bs-target="#modalImport">
-                <i class="fas fa-file-import me-1"></i> Importar CSV
-            </button>
+
+        <!-- Ações: 3 split buttons -->
+        <div class="d-flex gap-2 flex-wrap align-items-center">
+
+            <!-- 1. Inserir Item -->
+            <div class="btn-group shadow-sm" role="group">
+                <button type="button" class="btn btn-primary btn-action-main" data-bs-toggle="modal" data-bs-target="#modalAdd">
+                    <i class="fas fa-plus me-1"></i> Inserir Item
+                </button>
+                <button type="button" class="btn btn-primary btn-action-caret dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
+                    <span class="visually-hidden">Opções</span>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 mt-1">
+                    <li>
+                        <a class="dropdown-item py-2" href="download_template_price_list.php">
+                            <i class="fas fa-file-csv me-2 text-success"></i>Baixar Modelo CSV
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- 2. Adição em Massa -->
+            <div class="btn-group shadow-sm" role="group">
+                <button type="button" class="btn btn-action-massa btn-action-main" data-bs-toggle="modal" data-bs-target="#modalAddMassa">
+                    <i class="fas fa-layer-group me-1"></i> Adição em Massa
+                </button>
+                <button type="button" class="btn btn-action-massa btn-action-caret dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
+                    <span class="visually-hidden">Opções</span>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 mt-1">
+                    <li>
+                        <a class="dropdown-item py-2" href="download_template_price_list.php">
+                            <i class="fas fa-file-csv me-2 text-success"></i>Baixar Modelo CSV
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- 3. Atualizar Price List (destrutivo) -->
+            <div class="btn-group shadow-sm" role="group">
+                <button type="button" class="btn btn-danger btn-action-main" data-bs-toggle="modal" data-bs-target="#modalImport">
+                    <i class="fas fa-sync-alt me-1"></i> Atualizar Price List
+                </button>
+                <button type="button" class="btn btn-danger btn-action-caret dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
+                    <span class="visually-hidden">Opções</span>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 mt-1">
+                    <li>
+                        <a class="dropdown-item py-2" href="download_template_price_list.php">
+                            <i class="fas fa-file-csv me-2 text-success"></i>Baixar Modelo CSV
+                        </a>
+                    </li>
+                    <li><hr class="dropdown-divider my-1"></li>
+                    <li>
+                        <a class="dropdown-item py-2" href="exportar_price_list.php">
+                            <i class="fas fa-download me-2 text-secondary"></i>Exportar Price List Atual
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
         </div>
     </div>
 
