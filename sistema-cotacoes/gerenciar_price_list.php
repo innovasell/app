@@ -39,6 +39,9 @@ require_once 'conexao.php';
     <?php if (isset($_GET['sucesso_add'])): ?>
         <div class="alert alert-success alert-dismissible fade show"><i class="fas fa-check-circle me-2"></i>Item adicionado com sucesso! <button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
     <?php endif; ?>
+    <?php if (isset($_GET['sucesso_massa'])): ?>
+        <div class="alert alert-success alert-dismissible fade show"><i class="fas fa-layer-group me-2"></i><strong><?= (int)$_GET['sucesso_massa'] ?> itens</strong> adicionados em massa com sucesso! A price list anterior foi mantida. <button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+    <?php endif; ?>
     <?php if (isset($_GET['erro'])): ?>
         <div class="alert alert-danger alert-dismissible fade show"><i class="fas fa-times-circle me-2"></i><?= htmlspecialchars($_GET['erro']) ?> <button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
     <?php endif; ?>
@@ -71,6 +74,9 @@ require_once 'conexao.php';
             </a>
             <button class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalAdd">
                 <i class="fas fa-plus me-1"></i> Novo Item
+            </button>
+            <button class="btn btn-sm btn-outline-warning fw-bold" data-bs-toggle="modal" data-bs-target="#modalAddMassa">
+                <i class="fas fa-layer-group me-1"></i> Adição em Massa
             </button>
             <button class="btn btn-sm btn-success-custom" data-bs-toggle="modal" data-bs-target="#modalImport">
                 <i class="fas fa-file-import me-1"></i> Importar CSV
@@ -181,6 +187,40 @@ require_once 'conexao.php';
                 <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
                 <button class="btn btn-warning" onclick="atualizarItem()"><i class="fas fa-save me-1"></i>Atualizar</button>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── MODAL: Adição em Massa ────────────────────────────── -->
+<div class="modal fade" id="modalAddMassa" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header" style="background:linear-gradient(135deg,#e67e00,#f59f00);color:#fff;">
+                <h5 class="modal-title"><i class="fas fa-layer-group me-2"></i>Adição em Massa (CSV)</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="adicionar_massa_price_list.php" method="POST" enctype="multipart/form-data">
+                <div class="modal-body">
+                    <div class="alert alert-info py-2 small mb-3">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Os itens do CSV serão <strong>adicionados</strong> à price list atual — nenhum item existente será removido.
+                    </div>
+                    <div class="alert alert-light border py-2 small mb-3">
+                        <i class="fas fa-table me-1 text-muted"></i>
+                        Use o mesmo modelo do CSV padrão, separado por <strong>ponto e vírgula (;)</strong>.
+                        <a href="download_template_price_list.php" class="ms-1 text-success fw-bold"><i class="fas fa-download me-1"></i>Baixar modelo</a>
+                    </div>
+                    <label class="form-label fw-bold">Arquivo CSV</label>
+                    <input class="form-control" type="file" name="arquivo_csv_massa" accept=".csv" required>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn fw-bold text-white" style="background:#e67e00;border-color:#e67e00;"
+                            onclick="return confirm('Confirma a adição em massa? Os itens existentes NÃO serão apagados.')">
+                        <i class="fas fa-layer-group me-1"></i>Adicionar em Massa
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
